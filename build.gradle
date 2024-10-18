@@ -1,0 +1,18 @@
+plugins {
+    id("java")
+}
+
+group = "dev.kyriji"
+version = ""
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'redis.clients', name: 'jedis', version: '5.2.0'
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
