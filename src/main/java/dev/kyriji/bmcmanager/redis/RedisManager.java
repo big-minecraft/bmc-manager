@@ -64,7 +64,7 @@ public class RedisManager {
 		}
 
 		try (Jedis jedisPub = jedisPool.getResource()) {
-			jedisPub.publish("instance-registered", json);
+			jedisPub.publish("instance-changed", json);
 		}
 	}
 
@@ -74,6 +74,10 @@ public class RedisManager {
 
 		try (Jedis jedisPub = jedisPool.getResource()) {
 			jedisPub.hdel("instances", uid);
+		}
+
+		try (Jedis jedisPub = jedisPool.getResource()) {
+			jedisPub.publish("instance-changed", name);
 		}
 	}
 
