@@ -1,9 +1,10 @@
 plugins {
-    id("java")
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
-group = "dev.kyriji"
-version = ""
+group = 'dev.kyriji'
+version = ''
 
 repositories {
     mavenCentral()
@@ -11,8 +12,23 @@ repositories {
 
 dependencies {
     implementation group: 'redis.clients', name: 'jedis', version: '5.2.0'
+
+    // Importing the BOM for Fabric8 Kubernetes Client to avoid version conflicts
+    implementation platform('io.fabric8:kubernetes-client-bom:6.13.4')
+
+    // Actual Kubernetes client dependency
+    implementation 'io.fabric8:kubernetes-client-api:6.13.4'
+    implementation 'io.fabric8:kubernetes-client:6.13.4'
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'dev.kyriji.bmcmanager.BMCManager'
+        )
+    }
 }
