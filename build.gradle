@@ -8,17 +8,16 @@ version = ''
 
 repositories {
     mavenCentral()
+    maven { url "https://jitpack.io" }
 }
 
 dependencies {
     implementation group: 'redis.clients', name: 'jedis', version: '5.2.0'
 
-    // Importing the BOM for Fabric8 Kubernetes Client to avoid version conflicts
-    implementation platform('io.fabric8:kubernetes-client-bom:6.13.4')
-
-    // Actual Kubernetes client dependency
     implementation 'io.fabric8:kubernetes-client-api:6.13.4'
     implementation 'io.fabric8:kubernetes-client:6.13.4'
+
+    implementation 'com.github.BigMinecraftFramework:bmc-api:1.0.2'
 }
 
 tasks.test {

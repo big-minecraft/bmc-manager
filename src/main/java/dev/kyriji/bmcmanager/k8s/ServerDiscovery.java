@@ -14,7 +14,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public class ServerDiscovery {
 	private final KubernetesClient client;
-	private static final String LABEL = "kuvel.azisaba.net/enable-server-discovery";
+	private static final String LABEL = "kyriji.dev/enable-server-discovery";
 
 	private final HashMap<String, Pod> podMap = new HashMap<>();
 	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
