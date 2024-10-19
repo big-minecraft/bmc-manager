@@ -61,7 +61,9 @@ public class RedisManager {
 
 		try (Jedis jedisPub = jedisPool.getResource()) {
 			jedisPub.hset("instances", uid, json);
+		}
 
+		try (Jedis jedisPub = jedisPool.getResource()) {
 			jedisPub.publish("instance-registered", json);
 		}
 	}
