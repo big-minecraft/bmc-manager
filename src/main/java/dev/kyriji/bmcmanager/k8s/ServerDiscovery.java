@@ -40,6 +40,9 @@ public class ServerDiscovery {
 		List<Pod> podList = client.pods().withLabel(LABEL, "true").list().getItems();
 
 		podList.forEach(pod -> {
+			if (pod.getStatus().getPodIP() == null) return;
+			if (pod.getStatus().getPhase().equals("Terminating")) return;
+
 			if (diff(pod)) RedisManager.registerInstance(pod);
 		});
 

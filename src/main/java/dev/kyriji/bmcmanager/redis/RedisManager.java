@@ -26,6 +26,11 @@ public class RedisManager {
 			String pong = jedis.ping();
 			if ("PONG".equals(pong)) {
 				System.out.println("Connected to Redis successfully.");
+				jedis.del("instances");
+
+				try (Jedis jedisPub = jedisPool.getResource()) {
+					jedisPub.publish("instance-changed", "");
+				}
 			} else {
 				System.out.println("Failed to connect to Redis.");
 			}
