@@ -60,8 +60,9 @@ public class RedisManager {
 		String podName = pod.getMetadata().getName();
 		String uid = pod.getMetadata().getUid();
 		String ip = pod.getStatus().getPodIP();
+		String gamemode = pod.getMetadata().getLabels().get("app");
 
-			MinecraftInstance instance = new MinecraftInstance(uid, name, podName, ip);
+			MinecraftInstance instance = new MinecraftInstance(uid, name, podName, ip, gamemode);
 
 			String json = gson.toJson(instance);
 
@@ -79,8 +80,9 @@ public class RedisManager {
 		String podName = pod.getMetadata().getName();
 		String uid = pod.getMetadata().getUid();
 		String ip = pod.getStatus().getPodIP();
+		String gamemode = pod.getMetadata().getLabels().get("app");
 
-		MinecraftInstance proxy = new MinecraftInstance(uid, name, podName, ip);
+		MinecraftInstance proxy = new MinecraftInstance(uid, name, podName, ip, gamemode);
 
 		String json = gson.toJson(proxy);
 
