@@ -5,7 +5,6 @@ import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.Pod;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
 import java.util.ArrayList;
@@ -27,6 +26,7 @@ public class RedisManager {
 			if ("PONG".equals(pong)) {
 				System.out.println("Connected to Redis successfully.");
 				jedis.del("instances");
+				jedis.del("proxies");
 
 				try (Jedis jedisPub = jedisPool.getResource()) {
 					jedisPub.publish("instance-changed", "");
@@ -57,29 +57,49 @@ public class RedisManager {
 
 	public static void registerInstance(Pod pod) {
 		String name = generateName(pod);
+		String podName = pod.getMetadata().getName();
 		String uid = pod.getMetadata().getUid();
 		String ip = pod.getStatus().getPodIP();
 
-		MinecraftInstance instance = new MinecraftInstance(uid, name, ip);
+			MinecraftInstance instance = new MinecraftInstance(uid, name, podName, ip);
 
-		String json = gson.toJson(instance);
+			String json = gson.toJson(instance);
 
-		try (Jedis jedisPub = jedisPool.getResource()) {
-			jedisPub.hset("instances", uid, json);
-		}
+			try (Jedis jedisPub = jedisPool.getResource()) {
+				jedisPub.hset("instances", uid, json);
+			}
 
 		try (Jedis jedisPub = jedisPool.getResource()) {
 			jedisPub.publish("instance-changed", json);
 		}
 	}
 
-	public static void unregisterInstance(String uid) {
-		String name = getRegisteredName(uid);
-		if (name == null) return;
+	public static void registerProxy(Pod pod) {
+		String name = generateName(pod);
+		String podName = pod.getMetadata().getName();
+		String uid = pod.getMetadata().getUid();
+		String ip = pod.getStatus().getPodIP();
 
+		MinecraftInstance proxy = new MinecraftInstance(uid, name, podName, ip);
+
+		String json = gson.toJson(proxy);
+
+		try (Jedis jedisPub = jedisPool.getResource()) {
+			jedisPub.hset("proxies", uid, json);
+		}
+	}
+
+	public static void unregisterPod(String uid) {
 		try (Jedis jedisPub = jedisPool.getResource()) {
 			jedisPub.hdel("instances", uid);
 		}
+
+		try (Jedis jedisPub = jedisPool.getResource()) {
+			jedisPub.hdel("proxies", uid);
+		}
+
+		String name = getRegisteredName(uid);
+		if (name == null) return;
 
 		try (Jedis jedisPub = jedisPool.getResource()) {
 			jedisPub.publish("instance-changed", name);

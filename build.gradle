@@ -17,7 +17,7 @@ dependencies {
     implementation 'io.fabric8:kubernetes-client-api:6.13.4'
     implementation 'io.fabric8:kubernetes-client:6.13.4'
 
-    implementation 'com.github.BigMinecraftFramework:bmc-api:1.0.2'
+    implementation 'com.github.BigMinecraftFramework:bmc-api:1.0.4'
 }
 
 tasks.test {

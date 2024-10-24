@@ -38,17 +38,25 @@ public class ServerDiscovery {
 
 	public void discoverServers() {
 		List<Pod> podList = client.pods().withLabel(LABEL, "true").list().getItems();
+		List<Pod> proxyList = client.pods().withLabel("app", "proxy").list().getItems();
+
+		podList.addAll(proxyList);
 
 		podList.forEach(pod -> {
 			if (pod.getStatus().getPodIP() == null) return;
 			if (pod.getStatus().getPhase().equals("Terminating")) return;
 
-			if (diff(pod)) RedisManager.registerInstance(pod);
+			boolean proxy = pod.getMetadata().getLabels().get("app").equals("proxy");
+
+			if (diff(pod)) {
+				if (proxy) RedisManager.registerProxy(pod);
+				else RedisManager.registerInstance(pod);
+			}
 		});
 
 
 		List<String> uidList = getDeletedPodUidList(client);
-		for(String uid : uidList) RedisManager.unregisterInstance(uid);
+		for(String uid : uidList) RedisManager.unregisterPod(uid);
 	}
 
 	private boolean diff(Pod pod) {
