@@ -14,6 +14,8 @@ public class RedisManager {
 	private static JedisPool jedisPool;
 	private static Gson gson;
 
+	public static String INITIAL_SERVER_TAG = "kyriji.dev/initial-server";
+
 	public static void init() {
 		String redisHost = "redis-service";
 		int redisPort = 6379;
@@ -45,7 +47,9 @@ public class RedisManager {
 					@Override
 					public void onMessage(String channel, String message) {
 						List<MinecraftInstance> instances = getInstances();
-						MinecraftInstance instance = instances.get((int) (Math.random() * instances.size()));
+						instances = instances.stream().filter(MinecraftInstance::isInitialServer).toList();
+
+							MinecraftInstance instance = instances.get((int) (Math.random() * instances.size()));
 						try (Jedis jedisPub = jedisPool.getResource()) {
 							jedisPub.publish("initial-server-response", message + " " + instance.getName());
 						}
@@ -62,7 +66,10 @@ public class RedisManager {
 		String ip = pod.getStatus().getPodIP();
 		String gamemode = pod.getMetadata().getLabels().get("app");
 
-			MinecraftInstance instance = new MinecraftInstance(uid, name, podName, ip, gamemode);
+		String initialServerTag = pod.getMetadata().getLabels().get(INITIAL_SERVER_TAG);
+		boolean initialServer = initialServerTag != null && initialServerTag.equals("true");
+
+			MinecraftInstance instance = new MinecraftInstance(uid, name, podName, ip, gamemode, initialServer);
 
 			String json = gson.toJson(instance);
 
@@ -82,7 +89,10 @@ public class RedisManager {
 		String ip = pod.getStatus().getPodIP();
 		String gamemode = pod.getMetadata().getLabels().get("app");
 
-		MinecraftInstance proxy = new MinecraftInstance(uid, name, podName, ip, gamemode);
+		String initialServerTag = pod.getMetadata().getLabels().get(INITIAL_SERVER_TAG);
+		boolean initialServer = initialServerTag != null && initialServerTag.equals("true");
+
+		MinecraftInstance proxy = new MinecraftInstance(uid, name, podName, ip, gamemode, initialServer);
 
 		String json = gson.toJson(proxy);
 
