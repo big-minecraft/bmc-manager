@@ -110,11 +110,8 @@ public class RedisManager {
 			jedisPub.hdel("proxies", uid);
 		}
 
-		String name = getRegisteredName(uid);
-		if (name == null) return;
-
 		try (Jedis jedisPub = jedisPool.getResource()) {
-			jedisPub.publish("instance-changed", name);
+			jedisPub.publish("instance-changed", "");
 		}
 	}
 
