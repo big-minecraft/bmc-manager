@@ -49,7 +49,7 @@ public class RedisManager {
 						List<MinecraftInstance> instances = getInstances();
 						instances = instances.stream().filter(MinecraftInstance::isInitialServer).toList();
 
-							MinecraftInstance instance = instances.get((int) (Math.random() * instances.size()));
+						MinecraftInstance instance = instances.get((int) (Math.random() * instances.size()));
 						try (Jedis jedisPub = jedisPool.getResource()) {
 							jedisPub.publish("initial-server-response", message + " " + instance.getName());
 						}

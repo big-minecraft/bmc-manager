@@ -19,7 +19,6 @@ public class ServerDiscovery {
 	private final HashMap<String, Pod> podMap = new HashMap<>();
 	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-
 	public ServerDiscovery() {
 		client = new KubernetesClientBuilder().build();
 
@@ -53,7 +52,6 @@ public class ServerDiscovery {
 				else RedisManager.registerInstance(pod);
 			}
 		});
-
 
 		List<String> uidList = getDeletedPodUidList(client);
 		for(String uid : uidList) RedisManager.unregisterPod(uid);
