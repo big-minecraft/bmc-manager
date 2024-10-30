@@ -1,6 +1,8 @@
-package dev.kyriji.bmcmanager.k8s;
+package dev.kyriji.bmcmanager.tasks;
 
-import dev.kyriji.bmcmanager.redis.RedisManager;
+import dev.kyriji.bmcmanager.factories.MinecraftInstanceFactory;
+import dev.kyriji.bmcmanager.controllers.NetworkInstanceManager;
+import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
@@ -9,23 +11,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
-public class ServerDiscovery {
+public class ServerDiscoveryTask {
 	private final KubernetesClient client;
 	private static final String LABEL = "kyriji.dev/enable-server-discovery";
-
+	private final NetworkInstanceManager networkInstanceManager;
 	private final HashMap<String, Pod> podMap = new HashMap<>();
-	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-	public ServerDiscovery() {
-		client = new KubernetesClientBuilder().build();
+	public ServerDiscoveryTask(NetworkInstanceManager networkInstanceManager) {
+		this.networkInstanceManager = networkInstanceManager;
+		this.client = new KubernetesClientBuilder().build();
 
 		new Thread(() -> {
 			while (true) {
 				discoverServers();
-
 				try {
 					Thread.sleep(5000);
 				} catch (InterruptedException e) {
@@ -35,7 +34,7 @@ public class ServerDiscovery {
 		}).start();
 	}
 
-	public void discoverServers() {
+	private void discoverServers() {
 		List<Pod> podList = client.pods().withLabel(LABEL, "true").list().getItems();
 		List<Pod> proxyList = client.pods().withLabel("app", "proxy").list().getItems();
 
@@ -45,16 +44,22 @@ public class ServerDiscovery {
 			if (pod.getStatus().getPodIP() == null) return;
 			if (pod.getStatus().getPhase().equals("Terminating")) return;
 
-			boolean proxy = pod.getMetadata().getLabels().get("app").equals("proxy");
+			boolean isProxy = pod.getMetadata().getLabels().get("app").equals("proxy");
 
 			if (diff(pod)) {
-				if (proxy) RedisManager.registerProxy(pod);
-				else RedisManager.registerInstance(pod);
+				MinecraftInstance instance = MinecraftInstanceFactory.createFromPod(pod);
+				if (isProxy) {
+					networkInstanceManager.registerProxy(instance);
+				} else {
+					networkInstanceManager.registerInstance(instance);
+				}
 			}
 		});
 
 		List<String> uidList = getDeletedPodUidList(client);
-		for(String uid : uidList) RedisManager.unregisterPod(uid);
+		for (String uid : uidList) {
+			networkInstanceManager.unregisterInstance(uid);
+		}
 	}
 
 	private boolean diff(Pod pod) {
