@@ -59,14 +59,12 @@ public class ServerDiscovery {
 
 	private boolean diff(Pod pod) {
 		String uid = pod.getMetadata().getUid();
-
 		if (!podMap.containsKey(uid)) {
 			podMap.put(uid, pod);
 			return true;
 		}
 
 		Pod oldPod = podMap.get(uid);
-
 		if (!Objects.equals(oldPod.getStatus().getPhase(), pod.getStatus().getPhase())) {
 			podMap.put(uid, pod);
 			return true;
@@ -78,11 +76,7 @@ public class ServerDiscovery {
 	private List<String> getDeletedPodUidList(KubernetesClient client) {
 		List<String> uidList = new ArrayList<>(podMap.keySet());
 		client.pods().list().getItems().forEach(pod -> uidList.remove(pod.getMetadata().getUid()));
-
-		for (String uid : uidList) {
-			podMap.remove(uid);
-		}
-
+		for (String uid : uidList) podMap.remove(uid);
 		return uidList;
 	}
 }

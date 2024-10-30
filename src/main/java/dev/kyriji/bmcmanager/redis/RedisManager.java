@@ -118,16 +118,6 @@ public class RedisManager {
 		}
 	}
 
-	public static String getRegisteredName(String uid) {
-		try (Jedis jedisPub = jedisPool.getResource()) {
-			String json = jedisPub.hget("instances", uid);
-			if (json == null) return null;
-
-			MinecraftInstance instance = gson.fromJson(json, MinecraftInstance.class);
-			return instance.getName();
-		}
-	}
-
 	public static String generateName(Pod pod) {
 		String deploymentName = pod.getMetadata().getLabels().get("app");
 		String uid = pod.getMetadata().getUid();
