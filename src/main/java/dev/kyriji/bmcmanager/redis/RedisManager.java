@@ -69,13 +69,16 @@ public class RedisManager {
 		String initialServerTag = pod.getMetadata().getLabels().get(INITIAL_SERVER_TAG);
 		boolean initialServer = initialServerTag != null && initialServerTag.equals("true");
 
-			MinecraftInstance instance = new MinecraftInstance(uid, name, podName, ip, gamemode, initialServer);
+		MinecraftInstance instance = new MinecraftInstance(uid, name, podName, ip, gamemode, initialServer);
 
-			String json = gson.toJson(instance);
+		String json = gson.toJson(instance);
 
-			try (Jedis jedisPub = jedisPool.getResource()) {
-				jedisPub.hset("instances", uid, json);
-			}
+		try (Jedis jedisPub = jedisPool.getResource()) {
+
+			System.out.println("Registering instance: " + uid + "\n" + json);
+
+			jedisPub.hset("instances", uid, json);
+		}
 
 		try (Jedis jedisPub = jedisPool.getResource()) {
 			jedisPub.publish("instance-changed", json);
