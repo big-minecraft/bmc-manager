@@ -42,7 +42,7 @@ shadowJar {
     archiveClassifier.set('')
 }
 
-tasks.register('buildAndUploadJar') {
+tasks.register('devDeployJar') {
     dependsOn tasks.shadowJar
     doLast {
         def host = project.findProperty('sftpHost') as String
@@ -77,5 +77,10 @@ tasks.register('buildAndUploadJar') {
             println "Error during upload: ${e.message}"
             throw e
         }
+
+        println "Restarting kubernetes manager deployment..."
+        def process = "kubectl rollout restart deployment manager".execute()
+        process.waitFor()
+        println "Restart initiated..."
     }
 }
