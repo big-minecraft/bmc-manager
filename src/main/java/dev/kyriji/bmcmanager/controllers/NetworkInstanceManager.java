@@ -10,43 +10,41 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NetworkInstanceManager {
-	private final RedisManager redisManager;
 	private final ConcurrentHashMap<UUID, String> playerToProxy = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<UUID, String> playerToServer = new ConcurrentHashMap<>();
 	private final Gson gson = new Gson();
 
-	public NetworkInstanceManager(RedisManager redisManager) {
-		this.redisManager = redisManager;
+	public NetworkInstanceManager() {
 		clearExistingData();
 		setupInitialServerListener();
 	}
 
 	private void clearExistingData() {
-		redisManager.del("instances");
-		redisManager.del("proxies");
-		redisManager.del("player-connections");
-		redisManager.publish("instance-changed", "");
+		RedisManager.get().del("instances");
+		RedisManager.get().del("proxies");
+		RedisManager.get().del("player-connections");
+		RedisManager.get().publish("instance-changed", "");
 	}
 
 	public void registerProxy(MinecraftInstance proxy) {
-		redisManager.hset("proxies", proxy.getUid(), gson.toJson(proxy));
+		RedisManager.get().hset("proxies", proxy.getUid(), gson.toJson(proxy));
 	}
 
 	public void registerInstance(MinecraftInstance instance) {
-		redisManager.hset("instances", instance.getUid(), gson.toJson(instance));
-		redisManager.publish("instance-changed", gson.toJson(instance));
+		RedisManager.get().hset("instances", instance.getUid(), gson.toJson(instance));
+		RedisManager.get().publish("instance-changed", gson.toJson(instance));
 	}
 
 	public void unregisterInstance(String uid) {
-		redisManager.hdel("instances", uid);
-		redisManager.hdel("proxies", uid);
-		redisManager.publish("instance-changed", "");
+		RedisManager.get().hdel("instances", uid);
+		RedisManager.get().hdel("proxies", uid);
+		RedisManager.get().publish("instance-changed", "");
 	}
 
 	public void updatePlayerConnection(UUID playerId, String proxyUid, String serverUid) {
 		playerToProxy.put(playerId, proxyUid);
 		playerToServer.put(playerId, serverUid);
-		redisManager.hset("player-connections", playerId.toString(), gson.toJson(new PlayerConnection(proxyUid, serverUid)));
+		RedisManager.get().hset("player-connections", playerId.toString(), gson.toJson(new PlayerConnection(proxyUid, serverUid)));
 	}
 
 	public PlayerConnection getPlayerConnection(UUID playerId) {
@@ -57,7 +55,7 @@ public class NetworkInstanceManager {
 
 	public List<MinecraftInstance> getInstances() {
 		List<MinecraftInstance> instances = new ArrayList<>();
-		redisManager.hgetAll("instances").forEach((uid, json) -> {
+		RedisManager.get().hgetAll("instances").forEach((uid, json) -> {
 			MinecraftInstance instance = gson.fromJson(json, MinecraftInstance.class);
 			instances.add(instance);
 		});
@@ -66,7 +64,7 @@ public class NetworkInstanceManager {
 
 	private void setupInitialServerListener() {
 		new Thread(() -> {
-			redisManager.subscribe(new JedisPubSub() {
+			RedisManager.get().subscribe(new JedisPubSub() {
 				@Override
 				public void onMessage(String channel, String message) {
 					List<MinecraftInstance> instances = getInstances();
@@ -74,7 +72,7 @@ public class NetworkInstanceManager {
 
 					if (!instances.isEmpty()) {
 						MinecraftInstance instance = instances.get((int) (Math.random() * instances.size()));
-						redisManager.publish("initial-server-response", message + " " + instance.getName());
+						RedisManager.get().publish("initial-server-response", message + " " + instance.getName());
 					}
 				}
 			}, "request-initial-server");

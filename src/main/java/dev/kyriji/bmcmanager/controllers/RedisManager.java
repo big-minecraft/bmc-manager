@@ -7,17 +7,28 @@ import redis.clients.jedis.JedisPubSub;
 import java.util.Map;
 
 public class RedisManager {
+	private static RedisManager instance;
 	private final JedisPool jedisPool;
 
-	public RedisManager(String redisHost, int redisPort) {
+	private RedisManager(String redisHost, int redisPort) {
 		this.jedisPool = new JedisPool(redisHost, redisPort);
 		testConnection();
 	}
 
+	public static void init(String redisHost, int redisPort) {
+		synchronized (RedisManager.class) {
+			if (instance != null) return;
+			instance = new RedisManager(redisHost, redisPort);
+		}
+	}
+
+	public static RedisManager get() {
+		if (instance == null) throw new IllegalStateException("RedisManager has not been initialized");
+		return instance;
+	}
+
 	private void testConnection() {
-		System.out.println("testing connection");
 		try (Jedis jedis = jedisPool.getResource()) {
-			System.out.println("pinging");
 			String pong = jedis.ping();
 			if (!"PONG".equals(pong)) {
 				System.out.println("Failed to connect to Redis");

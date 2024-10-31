@@ -4,16 +4,12 @@ import dev.kyriji.bmcmanager.controllers.NetworkInstanceManager;
 import dev.kyriji.bmcmanager.tasks.ServerDiscoveryTask;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 
-import java.util.UUID;
-
 public class BMCManager {
 	public static ServerDiscoveryTask serverDiscoveryTask;
 
 	public static void main(String[] args) {
-		// In your main application class
-		System.out.println("sstarting");
-		RedisManager redisManager = new RedisManager("redis-service", 6379);
-		NetworkInstanceManager networkManager = new NetworkInstanceManager(redisManager);
+		RedisManager.init("redis-service", 6379);
+		NetworkInstanceManager networkManager = new NetworkInstanceManager();
 		ServerDiscoveryTask serverDiscovery = new ServerDiscoveryTask(networkManager);
 
 // 		To track a player connection
