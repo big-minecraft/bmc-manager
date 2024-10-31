@@ -1,3 +1,15 @@
+import com.jcraft.jsch.ChannelSftp
+import com.jcraft.jsch.JSch
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.jcraft:jsch:0.1.55'
+    }
+}
+
 plugins {
     id 'java'
     id 'com.github.johnrengelman.shadow' version '7.0.0'
@@ -13,10 +25,8 @@ repositories {
 
 dependencies {
     implementation group: 'redis.clients', name: 'jedis', version: '5.2.0'
-
     implementation 'io.fabric8:kubernetes-client-api:6.13.4'
     implementation 'io.fabric8:kubernetes-client:6.13.4'
-
     implementation 'com.github.BigMinecraftFramework:bmc-api:1.0.6'
 }
 
@@ -30,4 +40,42 @@ jar {
 
 shadowJar {
     archiveClassifier.set('')
+}
+
+tasks.register('buildAndUploadJar') {
+    dependsOn tasks.shadowJar
+    doLast {
+        def host = project.findProperty('sftpHost') as String
+        def user = project.findProperty('sftpUser') as String
+        def password = project.findProperty('sftpPassword') as String
+        def port = (project.findProperty('sftpPort') ?: '22') as int
+        def remoteDir = '/nfsshare/system/manager'
+        def localFile = tasks.shadowJar.outputs.files.singleFile
+
+        def jsch = new JSch()
+        def session = jsch.getSession(user, host, port)
+        session.setPassword(password)
+
+        def config = new Properties()
+        config.put("StrictHostKeyChecking", "no")
+        session.setConfig(config)
+
+        try {
+            println "Connecting to ${host}..."
+            session.connect()
+            def channel = session.openChannel("sftp")
+            channel.connect()
+            def channelSftp = (ChannelSftp) channel
+
+            println "Uploading ${localFile.name} to ${remoteDir}"
+            channelSftp.put(localFile.absolutePath, "${remoteDir}/${localFile.name}")
+            println "Upload complete!"
+
+            channelSftp.disconnect()
+            session.disconnect()
+        } catch (Exception e) {
+            println "Error during upload: ${e.message}"
+            throw e
+        }
+    }
 }
