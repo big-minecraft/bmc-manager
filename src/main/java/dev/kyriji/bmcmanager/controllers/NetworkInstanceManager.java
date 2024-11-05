@@ -12,6 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NetworkInstanceManager {
 	private final ConcurrentHashMap<UUID, String> playerToProxy = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<UUID, String> playerToServer = new ConcurrentHashMap<>();
+
+	private final ConcurrentHashMap<String, UUID> instanceNameToUUID = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<String, UUID> proxyIpToUUID = new ConcurrentHashMap<>();
 	private final Gson gson = new Gson();
 
 	public NetworkInstanceManager() {
@@ -27,15 +30,24 @@ public class NetworkInstanceManager {
 	}
 
 	public void registerProxy(MinecraftInstance proxy) {
+		proxyIpToUUID.put(proxy.getIp(), UUID.fromString(proxy.getUid()));
 		RedisManager.get().hset("proxies", proxy.getUid(), gson.toJson(proxy));
+		RedisManager.get().publish("proxy-registered", gson.toJson(proxy));
 	}
 
 	public void registerInstance(MinecraftInstance instance) {
+		instanceNameToUUID.put(instance.getName(), UUID.fromString(instance.getUid()));
 		RedisManager.get().hset("instances", instance.getUid(), gson.toJson(instance));
 		RedisManager.get().publish("instance-changed", gson.toJson(instance));
 	}
 
 	public void unregisterInstance(String uid) {
+		MinecraftInstance instance = gson.fromJson(RedisManager.get().hgetAll("instances").get(uid), MinecraftInstance.class);
+		if (instance != null) instanceNameToUUID.remove(instance.getName());
+
+		MinecraftInstance proxy = gson.fromJson(RedisManager.get().hgetAll("proxies").get(uid), MinecraftInstance.class);
+		if (proxy != null) proxyIpToUUID.remove(proxy.getIp());
+
 		RedisManager.get().hdel("instances", uid);
 		RedisManager.get().hdel("proxies", uid);
 		RedisManager.get().publish("instance-changed", "");
@@ -51,6 +63,14 @@ public class NetworkInstanceManager {
 		String proxyUid = playerToProxy.get(playerId);
 		String serverUid = playerToServer.get(playerId);
 		return new PlayerConnection(proxyUid, serverUid);
+	}
+
+	public UUID getInstanceUUID(String name) {
+		return instanceNameToUUID.get(name);
+	}
+
+	public UUID getProxyUUID(String ip) {
+		return proxyIpToUUID.get(ip);
 	}
 
 	public List<MinecraftInstance> getInstances() {
