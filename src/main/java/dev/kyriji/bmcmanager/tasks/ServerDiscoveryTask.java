@@ -1,5 +1,6 @@
 package dev.kyriji.bmcmanager.tasks;
 
+import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.factories.MinecraftInstanceFactory;
 import dev.kyriji.bmcmanager.controllers.NetworkInstanceManager;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
@@ -14,7 +15,6 @@ import java.util.Objects;
 
 public class ServerDiscoveryTask {
 	private final KubernetesClient client;
-	private static final String LABEL = "kyriji.dev/enable-server-discovery";
 	private final NetworkInstanceManager networkInstanceManager;
 	private final HashMap<String, Pod> podMap = new HashMap<>();
 
@@ -35,7 +35,7 @@ public class ServerDiscoveryTask {
 	}
 
 	private void discoverServers() {
-		List<Pod> podList = client.pods().withLabel(LABEL, "true").list().getItems();
+		List<Pod> podList = client.pods().withLabel(DeploymentLabel.SERVER_DISCOVERY.getLabel(), "true").list().getItems();
 		List<Pod> proxyList = client.pods().withLabel("app", "proxy").list().getItems();
 
 		podList.addAll(proxyList);

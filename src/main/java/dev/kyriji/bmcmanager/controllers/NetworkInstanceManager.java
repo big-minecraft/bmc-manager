@@ -1,6 +1,8 @@
 package dev.kyriji.bmcmanager.controllers;
 
 import com.google.gson.Gson;
+import dev.kyriji.bmcmanager.BMCManager;
+import dev.kyriji.bmcmanager.objects.Gamemode;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import redis.clients.jedis.JedisPubSub;
 
@@ -20,6 +22,7 @@ public class NetworkInstanceManager {
 	public NetworkInstanceManager() {
 		clearExistingData();
 		setupInitialServerListener();
+		setupQueueListener();
 	}
 
 	private void clearExistingData() {
@@ -87,15 +90,41 @@ public class NetworkInstanceManager {
 			RedisManager.get().subscribe(new JedisPubSub() {
 				@Override
 				public void onMessage(String channel, String message) {
-					List<MinecraftInstance> instances = getInstances();
-					instances = instances.stream().filter(MinecraftInstance::isInitialServer).toList();
+					List<Gamemode> gamemodes = GamemodeManager.getGamemodes();
+					List<Gamemode> initialGamemodes = gamemodes.stream().filter(gamemode -> gamemodes.getFirst().isInitial()).toList();
 
-					if (!instances.isEmpty()) {
-						MinecraftInstance instance = instances.get((int) (Math.random() * instances.size()));
-						RedisManager.get().publish("initial-server-response", message + " " + instance.getName());
+					if (initialGamemodes.isEmpty()) return;
+
+					Gamemode gamemode = initialGamemodes.get((int) (Math.random() * initialGamemodes.size()));
+					MinecraftInstance instance = QueueManager.findInstance(gamemode);
+
+					if (instance != null) {
+						RedisManager.get().publish("initial-server-response", message + ":" + instance.getName());
 					}
 				}
 			}, "request-initial-server");
+		}).start();
+	}
+
+	private void setupQueueListener() {
+		new Thread(() -> {
+			RedisManager.get().subscribe(new JedisPubSub() {
+				@Override
+				public void onMessage(String channel, String message) {
+					String[] parts = message.split(":");
+					UUID playerId = UUID.fromString(parts[0]);
+					String gamemodeString = parts[1];
+
+					Gamemode gamemode = GamemodeManager.getGamemode(gamemodeString);
+					if(gamemode == null) {
+						//Used to send back an error to the proxy
+						QueueManager.sendPlayerToInstance(playerId, null);
+						return;
+					}
+
+					QueueManager.queuePlayer(playerId, gamemode);
+				}
+			}, "queue-player");
 		}).start();
 	}
 
