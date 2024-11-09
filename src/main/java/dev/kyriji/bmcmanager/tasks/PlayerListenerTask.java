@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.NetworkInstanceManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
+import dev.wiji.bigminecraftapi.enums.RedisChannel;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import redis.clients.jedis.JedisPubSub;
 
@@ -37,7 +38,7 @@ public class PlayerListenerTask {
 					proxy.addPlayer(playerId, username);
 					RedisManager.get().hset("proxies", proxyUid.toString(), gson.toJson(proxy));
 				}
-			}, "proxy-connect");
+			}, RedisChannel.PROXY_CONNECT.getRef());
 		}).start();
 
 		new Thread(() -> {
@@ -64,7 +65,7 @@ public class PlayerListenerTask {
 
 					removePlayerFromInstance(playerId);
 				}
-			}, "proxy-disconnect");
+			}, RedisChannel.PROXY_DISCONNECT.getRef());
 		}).start();
 
 		new Thread(() -> {
@@ -75,12 +76,11 @@ public class PlayerListenerTask {
 
 					UUID playerId = UUID.fromString(parts[0]);
 					String name = parts[1];
-					String serverName = parts[2];
+					String serverIP = parts[2];
 
 					removePlayerFromInstance(playerId);
 
-
-					UUID serverUid = BMCManager.networkManager.getInstanceUUID(serverName);
+					UUID serverUid = BMCManager.networkManager.getInstanceUUID(serverIP);
 
 					if(serverUid == null) return;
 
@@ -91,7 +91,7 @@ public class PlayerListenerTask {
 					server.addPlayer(playerId, name);
 					RedisManager.get().hset("instances", serverUid.toString(), gson.toJson(server));
 				}
-			}, "server-switch");
+			}, RedisChannel.INSTANCE_SWITCH.getRef());
 		}).start();
 	}
 

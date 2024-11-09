@@ -3,6 +3,8 @@ package dev.kyriji.bmcmanager.controllers;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.enums.QueueStrategy;
 import dev.kyriji.bmcmanager.objects.Gamemode;
+import dev.wiji.bigminecraftapi.enums.InstanceState;
+import dev.wiji.bigminecraftapi.enums.RedisChannel;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 
 import java.util.List;
@@ -11,7 +13,6 @@ import java.util.UUID;
 public class QueueManager {
 
 	public static void queuePlayer(UUID player, Gamemode gamemode) {
-		QueueStrategy strategy = gamemode.getQueueStrategy();
 		MinecraftInstance selectedInstance = findInstance(gamemode);
 
 		sendPlayerToInstance(player, selectedInstance);
@@ -23,7 +24,6 @@ public class QueueManager {
 		return switch(strategy) {
 			case SPREAD -> findSpreadInstance(gamemode);
 			case FILL -> findFillInstance(gamemode);
-			case DYNAMIC_FILL -> findDynamicFillInstance(gamemode);
 		};
 	}
 
@@ -33,6 +33,9 @@ public class QueueManager {
 		int bestPlayerCount = Integer.MAX_VALUE;
 
 		for (MinecraftInstance instance : instances) {
+			if (instance.getPlayers().size() >= gamemode.getMaxPlayers()) continue;
+			if (instance.getState() != InstanceState.RUNNING) continue;
+
 			if (instance.getPlayers().size() < bestPlayerCount) {
 				bestInstance = instance;
 				bestPlayerCount = instance.getPlayers().size();
@@ -48,6 +51,8 @@ public class QueueManager {
 		int bestPlayerCount = 0;
 
 		for (MinecraftInstance instance : instances) {
+			if (instance.getState() != InstanceState.RUNNING) continue;
+
 			if (instance.getPlayers().size() < gamemode.getMaxPlayers() &&
 					instance.getPlayers().size() >= bestPlayerCount) {
 				bestInstance = instance;
@@ -58,13 +63,8 @@ public class QueueManager {
 		return bestInstance;
 	}
 
-	private static MinecraftInstance findDynamicFillInstance(Gamemode gamemode) {
-		//TODO: Deal with blocked instances
-		return null;
-	}
-
 	public static void sendPlayerToInstance(UUID player, MinecraftInstance instance) {
-		RedisManager.get().publish("queue-response", player.toString() + ":" +
+		RedisManager.get().publish(RedisChannel.QUEUE_RESPONSE.getRef(), player.toString() + ":" +
 				(instance == null ? "null" : instance.getName()));
 	}
 }

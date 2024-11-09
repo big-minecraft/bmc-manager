@@ -37,7 +37,7 @@ public class Gamemode {
 	public void fetchInstances() {
 		instances.clear();
 
-		for (MinecraftInstance instance : BigMinecraftAPI.getRedisManager().getInstances()) {
+		for (MinecraftInstance instance : BigMinecraftAPI.getNetworkManager().getInstances()) {
 			if (instance.getGamemode().equals(name)) instances.add(instance);
 		}
 	}

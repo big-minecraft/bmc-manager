@@ -6,21 +6,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GamemodeManager {
-	public static List<Gamemode> gamemodes = new ArrayList<>();
 
-	public static void registerGamemode(Gamemode gamemode) {
+	public List<Gamemode> gamemodes;
+
+	public GamemodeManager() {
+		this.gamemodes = new ArrayList<>();
+	}
+
+	public void registerGamemode(Gamemode gamemode) {
+		System.out.println("Registering gamemode " + gamemode.getName());
 		gamemodes.add(gamemode);
 	}
 
-	public static void unregisterGamemode(Gamemode gamemode) {
+	public void unregisterGamemode(Gamemode gamemode) {
+		System.out.println("Unregistering gamemode " + gamemode.getName());
 		gamemodes.remove(gamemode);
 	}
 
-	public static List<Gamemode> getGamemodes() {
-		return gamemodes;
+	public List<Gamemode> getGamemodes() {
+		return new ArrayList<>(gamemodes);
 	}
 
-	public static Gamemode getGamemode(String name) {
+	public Gamemode getGamemode(String name) {
 		for (Gamemode gamemode : gamemodes) {
 			if (gamemode.getName().equals(name)) return gamemode;
 		}

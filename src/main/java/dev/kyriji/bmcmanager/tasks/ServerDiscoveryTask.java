@@ -1,8 +1,10 @@
 package dev.kyriji.bmcmanager.tasks;
 
+import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.factories.MinecraftInstanceFactory;
 import dev.kyriji.bmcmanager.controllers.NetworkInstanceManager;
+import dev.kyriji.bmcmanager.objects.Gamemode;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -60,6 +62,8 @@ public class ServerDiscoveryTask {
 		for (String uid : uidList) {
 			networkInstanceManager.unregisterInstance(uid);
 		}
+
+		BMCManager.gamemodeManager.getGamemodes().forEach(Gamemode::fetchInstances);
 	}
 
 	private boolean diff(Pod pod) {

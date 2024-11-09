@@ -7,6 +7,7 @@ import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.factories.MinecraftInstanceFactory;
 import dev.kyriji.bmcmanager.objects.Gamemode;
+import dev.wiji.bigminecraftapi.enums.RedisChannel;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
@@ -28,7 +29,7 @@ public class GamemodeDiscoveryTask {
 				public void onMessage(String channel, String message) {
 					discoverGamemodes();
 				}
-			}, "gamemode-modified");
+			}, RedisChannel.GAMEMODE_MODIFIED.getRef());
 		}).start();
 
 		new Thread(() -> {
@@ -39,7 +40,11 @@ public class GamemodeDiscoveryTask {
 	}
 
 	public void discoverGamemodes() {
-		List<Gamemode> existingGamemodes = new ArrayList<>();
+		GamemodeManager gamemodeManager = BMCManager.gamemodeManager;
+
+		//TODO: For some reason the static gamemodes list like to reset, maybe because of the multithreading?
+		List<Gamemode> existingGamemodes = gamemodeManager.getGamemodes();
+		System.out.println("Existing gamemodes: " + existingGamemodes);
 		List<Gamemode> newGamemodes = new ArrayList<>();
 
 		List<Deployment> deployments = client.apps().deployments()
@@ -58,7 +63,6 @@ public class GamemodeDiscoveryTask {
 
 		deployments.forEach(deployment -> {
 			Gamemode gamemode = new Gamemode(deployment);
-			System.out.println("Found gamemode: " + gamemode.getName());
 			if(existingGamemodes.contains(gamemode)) {
 				existingGamemodes.remove(gamemode);
 			} else {
@@ -67,14 +71,13 @@ public class GamemodeDiscoveryTask {
 		});
 
 		for(Gamemode existingGamemode : existingGamemodes) {
-			GamemodeManager.unregisterGamemode(existingGamemode);
+			gamemodeManager.unregisterGamemode(existingGamemode);
 		}
 		for(Gamemode newGamemode : newGamemodes) {
-			GamemodeManager.registerGamemode(newGamemode);
+			gamemodeManager.registerGamemode(newGamemode);
 		}
 
-		for(Gamemode gamemode : GamemodeManager.getGamemodes()) {
-			System.out.println("Fetching instances for gamemode: " + gamemode.getName());
+		for(Gamemode gamemode : gamemodeManager.getGamemodes()) {
 			gamemode.fetchInstances();
 		}
 	}
