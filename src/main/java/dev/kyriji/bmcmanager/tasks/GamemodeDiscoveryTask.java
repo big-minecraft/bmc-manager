@@ -42,7 +42,6 @@ public class GamemodeDiscoveryTask {
 	public void discoverGamemodes() {
 		GamemodeManager gamemodeManager = BMCManager.gamemodeManager;
 
-		//TODO: For some reason the static gamemodes list like to reset, maybe because of the multithreading?
 		List<Gamemode> existingGamemodes = gamemodeManager.getGamemodes();
 		System.out.println("Existing gamemodes: " + existingGamemodes);
 		List<Gamemode> newGamemodes = new ArrayList<>();
