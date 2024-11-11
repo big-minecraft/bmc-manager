@@ -48,7 +48,7 @@ public class GamemodeDiscoveryTask {
 		List<Gamemode> newGamemodes = new ArrayList<>();
 
 		List<Deployment> deployments = client.apps().deployments()
-				.inNamespace("minecraft")
+				.inNamespace("default")
 				.list()
 				.getItems()
 				.stream()
