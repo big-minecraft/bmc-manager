@@ -33,7 +33,7 @@ public class QueueManager {
 		int bestPlayerCount = Integer.MAX_VALUE;
 
 		for (MinecraftInstance instance : instances) {
-			if (instance.getPlayers().size() >= gamemode.getMaxPlayers()) continue;
+			if (instance.getPlayers().size() >= gamemode.getScalingSettings().maxPlayers) continue;
 			if (instance.getState() != InstanceState.RUNNING) continue;
 
 			if (instance.getPlayers().size() < bestPlayerCount) {
@@ -53,7 +53,7 @@ public class QueueManager {
 		for (MinecraftInstance instance : instances) {
 			if (instance.getState() != InstanceState.RUNNING) continue;
 
-			if (instance.getPlayers().size() < gamemode.getMaxPlayers() &&
+			if (instance.getPlayers().size() < gamemode.getScalingSettings().maxPlayers &&
 					instance.getPlayers().size() >= bestPlayerCount) {
 				bestInstance = instance;
 				bestPlayerCount = instance.getPlayers().size();

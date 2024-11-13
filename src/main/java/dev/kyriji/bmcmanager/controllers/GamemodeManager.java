@@ -11,6 +11,13 @@ public class GamemodeManager {
 
 	public GamemodeManager() {
 		this.gamemodes = new ArrayList<>();
+
+		new Thread(() -> {
+			while (true) {
+				for(Gamemode gamemode : gamemodes) gamemode.scale();
+				try { Thread.sleep(1000); } catch (InterruptedException e) { e.printStackTrace(); }
+			}
+		}).start();
 	}
 
 	public void registerGamemode(Gamemode gamemode) {

@@ -2,6 +2,7 @@ package dev.kyriji.bmcmanager;
 
 import dev.kyriji.bmcmanager.controllers.GamemodeManager;
 import dev.kyriji.bmcmanager.controllers.NetworkInstanceManager;
+import dev.kyriji.bmcmanager.controllers.ScalingManager;
 import dev.kyriji.bmcmanager.tasks.GamemodeDiscoveryTask;
 import dev.kyriji.bmcmanager.tasks.InstanceListenerTask;
 import dev.kyriji.bmcmanager.tasks.PlayerListenerTask;
@@ -15,6 +16,7 @@ public class BMCManager {
 	public static PlayerListenerTask playerListener;
 	public static GamemodeDiscoveryTask gamemodeDiscovery;
 	public static InstanceListenerTask instanceListener;
+	public static ScalingManager scalingManager;
 
 	public static void main(String[] args) {
 		RedisManager.init("redis-service", 6379);
@@ -24,5 +26,6 @@ public class BMCManager {
 		playerListener = new PlayerListenerTask();
 		gamemodeDiscovery = new GamemodeDiscoveryTask();
 		instanceListener = new InstanceListenerTask();
+		scalingManager = new ScalingManager();
 	}
 }
