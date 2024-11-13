@@ -66,7 +66,10 @@ public class ScalingManager {
 		int currentInstances = getActiveInstanceCount(gamemode);
 
 		if(targetInstances == currentInstances) return;
-		else if(targetInstances < currentInstances) scaleDownInstances(gamemode.getInstances(), targetInstances);
+		else if(targetInstances < currentInstances) {
+			scaleDownInstances(gamemode.getInstances(), targetInstances);
+			gamemode.setLastScaleDown(System.currentTimeMillis());
+		} else gamemode.setLastScaleUp(System.currentTimeMillis());
 
 		/*
 		We only need to handle scaling down deployments so that we can choose which instances to remove.
