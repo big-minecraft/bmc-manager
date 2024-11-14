@@ -54,8 +54,9 @@ public class InstanceListenerTask {
 				@Override
 				public void onMessage(String channel, String message) {
 					List<Gamemode> gamemodes = gamemodeManager.getGamemodes();
-					List<Gamemode> initialGamemodes = gamemodes.stream().filter(gamemode ->
-							gamemodes.getFirst().isInitial() && !gamemode.getInstances().isEmpty()).toList();
+					List<Gamemode> initialGamemodes = gamemodes.stream()
+							.filter(gamemode -> gamemode.isInitial() && !gamemode.getInstances().isEmpty())
+							.toList();
 
 					if (initialGamemodes.isEmpty()) return;
 

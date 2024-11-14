@@ -43,7 +43,6 @@ public class GamemodeDiscoveryTask {
 		GamemodeManager gamemodeManager = BMCManager.gamemodeManager;
 
 		List<Gamemode> existingGamemodes = gamemodeManager.getGamemodes();
-		System.out.println("Existing gamemodes: " + existingGamemodes);
 		List<Gamemode> newGamemodes = new ArrayList<>();
 
 		List<Deployment> deployments = client.apps().deployments()

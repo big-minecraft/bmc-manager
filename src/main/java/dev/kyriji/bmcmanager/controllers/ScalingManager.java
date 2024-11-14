@@ -48,8 +48,8 @@ public class ScalingManager {
 
 		double playersPerInstance = (double) playerCount / instances;
 
-		if(playersPerInstance > settings.scaleUpThreshold) return ScaleResult.UP;
-		else if(playersPerInstance < settings.scaleDownThreshold) return ScaleResult.DOWN;
+		if(playersPerInstance >= settings.scaleUpThreshold) return ScaleResult.UP;
+		else if(playersPerInstance <= settings.scaleDownThreshold) return ScaleResult.DOWN;
 
 		return ScaleResult.NO_CHANGE;
 	}
@@ -82,7 +82,7 @@ public class ScalingManager {
 		// This indicates the gamemode is disabled
 		if(currentReplicas == 0) return;
 
-		deployment.getSpec().setReplicas(targetInstances);
+		client.apps().deployments().inNamespace("default").withName(gamemode.getName()).scale(targetInstances);
 	}
 
 	public int getTargetInstances(Gamemode gamemode, ScaleResult result) {
@@ -99,7 +99,7 @@ public class ScalingManager {
 			double playersPerInstance = (double) playerCount / activeCurrentInstances;
 			double targetRatio = settings.scaleUpThreshold;
 
-			while(playersPerInstance < targetRatio && instancesToAdd < scaleUpLimit) {
+			while(playersPerInstance <= targetRatio && instancesToAdd < scaleUpLimit) {
 				activeCurrentInstances++;
 				instancesToAdd++;
 				playersPerInstance = (double) playerCount / activeCurrentInstances;
@@ -111,7 +111,7 @@ public class ScalingManager {
 			double playersPerInstance = (double) playerCount / activeCurrentInstances;
 			double targetRatio = settings.scaleDownThreshold;
 
-			while(playersPerInstance > targetRatio && -instancesToAdd < scaleDownLimit) {
+			while(playersPerInstance < targetRatio && -instancesToAdd < scaleDownLimit) {
 				activeCurrentInstances--;
 				instancesToAdd--;
 				playersPerInstance = (double) playerCount / activeCurrentInstances;

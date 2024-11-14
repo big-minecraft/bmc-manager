@@ -25,9 +25,7 @@ public class PlayerListenerTask {
 					String username = parts[1];
 					String proxyIP = parts[2];
 
-					System.out.println(proxyIP);
 					UUID proxyUid = BMCManager.networkManager.getProxyUUID(proxyIP);
-					System.out.println(proxyUid);
 
 					if(proxyUid == null) return;
 
@@ -51,9 +49,7 @@ public class PlayerListenerTask {
 					String username = parts[1];
 					String proxyIP = parts[2];
 
-					System.out.println(proxyIP);
 					UUID proxyUid = BMCManager.networkManager.getProxyUUID(proxyIP);
-					System.out.println(proxyUid);
 					if(proxyUid == null) return;
 
 					String proxyString = RedisManager.get().hgetAll("proxies").get(proxyUid.toString());

@@ -74,11 +74,11 @@ public class Gamemode {
 	}
 
 	public boolean isOnScaleUpCooldown() {
-		return System.currentTimeMillis() - lastScaleUp < scalingSettings.scaleUpCooldown;
+		return System.currentTimeMillis() - lastScaleUp < scalingSettings.scaleUpCooldown * 1000;
 	}
 
 	public boolean isOnScaleDownCooldown() {
-		return System.currentTimeMillis() - lastScaleDown < scalingSettings.scaleDownCooldown;
+		return System.currentTimeMillis() - lastScaleDown < scalingSettings.scaleDownCooldown * 1000;
 	}
 
 	public void setLastScaleUp(long lastScaleUp) {
@@ -94,14 +94,16 @@ public class Gamemode {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 		Gamemode gamemode = (Gamemode) o;
-		return Objects.equals(name, gamemode.name);
+		return isInitial == gamemode.isInitial &&
+				Objects.equals(name, gamemode.name) &&
+				queueStrategy == gamemode.queueStrategy &&
+				Objects.equals(scalingSettings, gamemode.scalingSettings);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(name);
+		return Objects.hash(name, isInitial, queueStrategy, scalingSettings);
 	}
-
 
 	public static class ScalingSettings {
 		public ScaleStrategy strategy;
@@ -124,7 +126,10 @@ public class Gamemode {
 
 			this.maxPlayers = Integer.parseInt(labels.get(DeploymentLabel.MAX_PLAYERS.getLabel()));
 			this.minInstances = Integer.parseInt(labels.get(DeploymentLabel.MIN_INSTANCES.getLabel()));
-			this.maxInstances = Integer.parseInt(labels.get(DeploymentLabel.MAX_INSTANCES.getLabel()));
+
+			String maxInstancesString = labels.get(DeploymentLabel.MAX_INSTANCES.getLabel());
+			if(maxInstancesString.equalsIgnoreCase("unlimited")) this.maxInstances = Integer.MAX_VALUE;
+			else this.maxInstances = Integer.parseInt(labels.get(DeploymentLabel.MAX_INSTANCES.getLabel()));
 
 			this.scaleUpThreshold = Double.parseDouble(labels.get(DeploymentLabel.SCALE_UP_THRESHOLD.getLabel()));
 			this.scaleDownThreshold = Double.parseDouble(labels.get(DeploymentLabel.SCALE_DOWN_THRESHOLD.getLabel()));
@@ -134,6 +139,31 @@ public class Gamemode {
 
 			this.scaleUpLimit = Integer.parseInt(labels.get(DeploymentLabel.SCALE_UP_LIMIT.getLabel()));
 			this.scaleDownLimit = Integer.parseInt(labels.get(DeploymentLabel.SCALE_DOWN_LIMIT.getLabel()));
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if(this == o) return true;
+			if(o == null || getClass() != o.getClass()) return false;
+			ScalingSettings that = (ScalingSettings) o;
+			return maxPlayers == that.maxPlayers &&
+					minInstances == that.minInstances &&
+					maxInstances == that.maxInstances &&
+					Double.compare(that.scaleUpThreshold, scaleUpThreshold) == 0 &&
+					Double.compare(that.scaleDownThreshold, scaleDownThreshold) == 0 &&
+					Double.compare(that.scaleUpCooldown, scaleUpCooldown) == 0 &&
+					Double.compare(that.scaleDownCooldown, scaleDownCooldown) == 0 &&
+					scaleUpLimit == that.scaleUpLimit &&
+					scaleDownLimit == that.scaleDownLimit &&
+					strategy == that.strategy;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(strategy, maxPlayers, minInstances, maxInstances,
+					scaleUpThreshold, scaleDownThreshold,
+					scaleUpCooldown, scaleDownCooldown,
+					scaleUpLimit, scaleDownLimit);
 		}
 	}
 }
