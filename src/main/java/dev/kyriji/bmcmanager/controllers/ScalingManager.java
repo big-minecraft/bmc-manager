@@ -3,7 +3,9 @@ package dev.kyriji.bmcmanager.controllers;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.enums.ScaleStrategy;
+import dev.kyriji.bmcmanager.interfaces.Scalable;
 import dev.kyriji.bmcmanager.objects.Gamemode;
+import dev.kyriji.bmcmanager.objects.ScalingSettings;
 import dev.wiji.bigminecraftapi.BigMinecraftAPI;
 import dev.wiji.bigminecraftapi.enums.InstanceState;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
@@ -24,8 +26,8 @@ public class ScalingManager {
 		this.client = new KubernetesClientBuilder().build();
 	}
 
-	public ScaleResult checkToScale(Gamemode gamemode) {
-		Gamemode.ScalingSettings settings = gamemode.getScalingSettings();
+	public ScaleResult checkToScale(Scalable gamemode) {
+		ScalingSettings settings = gamemode.getScalingSettings();
 		ScaleStrategy strategy = settings.strategy;
 
 		ScaleResult result = switch(strategy) {
@@ -41,10 +43,10 @@ public class ScalingManager {
 		return result;
 	}
 
-	private ScaleResult checkToScaleThreshold(Gamemode gamemode) {
+	private ScaleResult checkToScaleThreshold(Scalable gamemode) {
 		int instances = getActiveInstanceCount(gamemode);
 		int playerCount = getPlayerCount(gamemode);
-		Gamemode.ScalingSettings settings = gamemode.getScalingSettings();
+		ScalingSettings settings = gamemode.getScalingSettings();
 
 		double playersPerInstance = (double) playerCount / instances;
 
@@ -54,12 +56,12 @@ public class ScalingManager {
 		return ScaleResult.NO_CHANGE;
 	}
 
-	private ScaleResult checkToScaleTrend(Gamemode gamemode) {
+	private ScaleResult checkToScaleTrend(Scalable gamemode) {
 
 		return ScaleResult.NO_CHANGE;
 	}
 
-	public void scale(Gamemode gamemode, ScaleResult result) {
+	public void scale(Scalable gamemode, ScaleResult result) {
 		if(result == ScaleResult.NO_CHANGE) return;
 
 		int targetInstances = getTargetInstances(gamemode, result);
@@ -85,13 +87,13 @@ public class ScalingManager {
 		client.apps().deployments().inNamespace("default").withName(gamemode.getName()).scale(targetInstances);
 	}
 
-	public int getTargetInstances(Gamemode gamemode, ScaleResult result) {
+	public int getTargetInstances(Scalable gamemode, ScaleResult result) {
 		int activeCurrentInstances = getActiveInstanceCount(gamemode);
 		int playerCount = getPlayerCount(gamemode);
 
 		int instancesToAdd = 0;
 
-		Gamemode.ScalingSettings settings = gamemode.getScalingSettings();
+		ScalingSettings settings = gamemode.getScalingSettings();
 
 		if(result == ScaleResult.UP) {
 			int scaleUpLimit = settings.scaleUpLimit;
@@ -136,7 +138,7 @@ public class ScalingManager {
 		}
 	}
 
-	public int getPlayerCount(Gamemode gamemode) {
+	public int getPlayerCount(Scalable gamemode) {
 		List<MinecraftInstance> instances = gamemode.getInstances();
 		int totalPlayers = 0;
 		for (MinecraftInstance instance : instances) {
@@ -145,7 +147,7 @@ public class ScalingManager {
 		return totalPlayers;
 	}
 
-	public int getActiveInstanceCount(Gamemode gamemode) {
+	public int getActiveInstanceCount(Scalable gamemode) {
 		return gamemode.getInstances().stream().filter(instance -> instance.getState() == InstanceState.RUNNING).toList().size();
 	}
 }

@@ -4,17 +4,16 @@ import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.enums.QueueStrategy;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
-import dev.kyriji.bmcmanager.enums.ScaleStrategy;
+import dev.kyriji.bmcmanager.interfaces.Scalable;
 import dev.wiji.bigminecraftapi.BigMinecraftAPI;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
-public class Gamemode {
+public class Gamemode implements Scalable {
 	private final String name;
 	private final boolean isInitial;
 	private final QueueStrategy queueStrategy;
@@ -53,10 +52,6 @@ public class Gamemode {
 		BMCManager.scalingManager.scale(this, result);
 	}
 
-	public String getName() {
-		return name;
-	}
-
 	public boolean isInitial() {
 		return isInitial;
 	}
@@ -65,26 +60,37 @@ public class Gamemode {
 		return queueStrategy;
 	}
 
-	public List<MinecraftInstance> getInstances() {
-		return new ArrayList<>(instances);
+	@Override
+	public String getName() {
+		return name;
 	}
 
+	@Override
 	public ScalingSettings getScalingSettings() {
 		return scalingSettings;
 	}
 
+	@Override
+	public List<MinecraftInstance> getInstances() {
+		return new ArrayList<>(instances);
+	}
+
+	@Override
 	public boolean isOnScaleUpCooldown() {
 		return System.currentTimeMillis() - lastScaleUp < scalingSettings.scaleUpCooldown * 1000;
 	}
 
+	@Override
 	public boolean isOnScaleDownCooldown() {
 		return System.currentTimeMillis() - lastScaleDown < scalingSettings.scaleDownCooldown * 1000;
 	}
 
+	@Override
 	public void setLastScaleUp(long lastScaleUp) {
 		this.lastScaleUp = lastScaleUp;
 	}
 
+	@Override
 	public void setLastScaleDown(long lastScaleDown) {
 		this.lastScaleDown = lastScaleDown;
 	}
@@ -103,67 +109,5 @@ public class Gamemode {
 	@Override
 	public int hashCode() {
 		return Objects.hash(name, isInitial, queueStrategy, scalingSettings);
-	}
-
-	public static class ScalingSettings {
-		public ScaleStrategy strategy;
-
-		public int maxPlayers;
-		public int minInstances;
-		public int maxInstances;
-
-		public double scaleUpThreshold;
-		public double scaleDownThreshold;
-
-		public double scaleUpCooldown;
-		public double scaleDownCooldown;
-
-		public int scaleUpLimit;
-		public int scaleDownLimit;
-
-		public ScalingSettings(Map<String, String> labels) {
-			this.strategy = ScaleStrategy.getStrategy(labels.get(DeploymentLabel.SCALE_STRATEGY.getLabel()));
-
-			this.maxPlayers = Integer.parseInt(labels.get(DeploymentLabel.MAX_PLAYERS.getLabel()));
-			this.minInstances = Integer.parseInt(labels.get(DeploymentLabel.MIN_INSTANCES.getLabel()));
-
-			String maxInstancesString = labels.get(DeploymentLabel.MAX_INSTANCES.getLabel());
-			if(maxInstancesString.equalsIgnoreCase("unlimited")) this.maxInstances = Integer.MAX_VALUE;
-			else this.maxInstances = Integer.parseInt(labels.get(DeploymentLabel.MAX_INSTANCES.getLabel()));
-
-			this.scaleUpThreshold = Double.parseDouble(labels.get(DeploymentLabel.SCALE_UP_THRESHOLD.getLabel()));
-			this.scaleDownThreshold = Double.parseDouble(labels.get(DeploymentLabel.SCALE_DOWN_THRESHOLD.getLabel()));
-
-			this.scaleUpCooldown = Double.parseDouble(labels.get(DeploymentLabel.SCALE_UP_COOLDOWN.getLabel()));
-			this.scaleDownCooldown = Double.parseDouble(labels.get(DeploymentLabel.SCALE_DOWN_COOLDOWN.getLabel()));
-
-			this.scaleUpLimit = Integer.parseInt(labels.get(DeploymentLabel.SCALE_UP_LIMIT.getLabel()));
-			this.scaleDownLimit = Integer.parseInt(labels.get(DeploymentLabel.SCALE_DOWN_LIMIT.getLabel()));
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if(this == o) return true;
-			if(o == null || getClass() != o.getClass()) return false;
-			ScalingSettings that = (ScalingSettings) o;
-			return maxPlayers == that.maxPlayers &&
-					minInstances == that.minInstances &&
-					maxInstances == that.maxInstances &&
-					Double.compare(that.scaleUpThreshold, scaleUpThreshold) == 0 &&
-					Double.compare(that.scaleDownThreshold, scaleDownThreshold) == 0 &&
-					Double.compare(that.scaleUpCooldown, scaleUpCooldown) == 0 &&
-					Double.compare(that.scaleDownCooldown, scaleDownCooldown) == 0 &&
-					scaleUpLimit == that.scaleUpLimit &&
-					scaleDownLimit == that.scaleDownLimit &&
-					strategy == that.strategy;
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(strategy, maxPlayers, minInstances, maxInstances,
-					scaleUpThreshold, scaleDownThreshold,
-					scaleUpCooldown, scaleDownCooldown,
-					scaleUpLimit, scaleDownLimit);
-		}
 	}
 }
