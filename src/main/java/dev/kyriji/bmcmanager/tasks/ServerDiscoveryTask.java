@@ -64,6 +64,7 @@ public class ServerDiscoveryTask {
 		}
 
 		BMCManager.gamemodeManager.getGamemodes().forEach(Gamemode::fetchInstances);
+		if(BMCManager.proxyManager.proxyDeployment != null) BMCManager.proxyManager.getProxyDeployment().fetchInstances();
 	}
 
 	private boolean diff(Pod pod) {

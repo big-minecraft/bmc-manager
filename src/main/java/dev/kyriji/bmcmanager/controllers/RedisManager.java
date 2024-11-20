@@ -2,23 +2,31 @@ package dev.kyriji.bmcmanager.controllers;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
+import java.time.Duration;
 import java.util.Map;
 
 public class RedisManager {
 	private static RedisManager instance;
 	private final JedisPool jedisPool;
 
-	private RedisManager(String redisHost, int redisPort) {
-		this.jedisPool = new JedisPool(redisHost, redisPort);
+	private RedisManager(String redisHost, int redisPort, int maxConnections) {
+		JedisPoolConfig poolConfig = new JedisPoolConfig();
+		poolConfig.setMaxTotal(maxConnections);
+		poolConfig.setMaxIdle(maxConnections / 4);
+		poolConfig.setMinIdle(1);
+		poolConfig.setMaxWait(Duration.ofSeconds(30));
+
+		this.jedisPool = new JedisPool(poolConfig, redisHost, redisPort);
 		testConnection();
 	}
 
 	public static void init(String redisHost, int redisPort) {
 		synchronized (RedisManager.class) {
 			if (instance != null) return;
-			instance = new RedisManager(redisHost, redisPort);
+			instance = new RedisManager(redisHost, redisPort, 25);
 		}
 	}
 
