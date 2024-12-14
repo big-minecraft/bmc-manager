@@ -11,12 +11,12 @@ public class MinecraftInstanceFactory {
 		String podName = pod.getMetadata().getName();
 		String uid = pod.getMetadata().getUid();
 		String ip = pod.getStatus().getPodIP();
-		String gamemode = pod.getMetadata().getLabels().get("app");
+		String deployment = pod.getMetadata().getLabels().get("app");
 
 		String initialServerTag = pod.getMetadata().getLabels().get(DeploymentLabel.INITIAL_SERVER.getLabel());
 		boolean initialServer = initialServerTag != null && initialServerTag.equals("true");
 
-		return new MinecraftInstance(uid, name, podName, ip, gamemode, initialServer);
+		return new MinecraftInstance(uid, name, podName, ip, deployment, initialServer);
 	}
 
 	private static String generateName(Pod pod) {

@@ -4,13 +4,12 @@ import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.enums.QueueStrategy;
 import dev.wiji.bigminecraftapi.BigMinecraftAPI;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
-import io.fabric8.kubernetes.api.model.apps.Deployment;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Gamemode {
+public class Deployment {
 
 	private final String name;
 	private final boolean isInitial;
@@ -19,7 +18,7 @@ public class Gamemode {
 
 	private final List<MinecraftInstance> instances;
 
-	public Gamemode(Deployment deployment) {
+	public Deployment(io.fabric8.kubernetes.api.model.apps.Deployment deployment) {
 		this.name = deployment.getMetadata().getName();
 
 		this.isInitial = Boolean.parseBoolean(deployment.getSpec().getTemplate().getMetadata().getLabels()
@@ -66,8 +65,8 @@ public class Gamemode {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		Gamemode gamemode = (Gamemode) o;
-		return Objects.equals(name, gamemode.name);
+		Deployment deployment = (Deployment) o;
+		return Objects.equals(name, deployment.name);
 	}
 
 	@Override

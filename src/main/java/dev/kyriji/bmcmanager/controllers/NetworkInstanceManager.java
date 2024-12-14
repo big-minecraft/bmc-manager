@@ -1,10 +1,8 @@
 package dev.kyriji.bmcmanager.controllers;
 
 import com.google.gson.Gson;
-import dev.kyriji.bmcmanager.objects.Gamemode;
 import dev.wiji.bigminecraftapi.enums.RedisChannel;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
-import redis.clients.jedis.JedisPubSub;
 
 import java.util.ArrayList;
 import java.util.List;
