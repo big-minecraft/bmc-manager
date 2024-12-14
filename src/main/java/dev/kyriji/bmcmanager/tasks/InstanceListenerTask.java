@@ -53,9 +53,10 @@ public class InstanceListenerTask {
 			RedisManager.get().subscribe(new JedisPubSub() {
 				@Override
 				public void onMessage(String channel, String message) {
-					List<Deployment> deployments = deploymentManager.getDeployments();
-					List<Deployment> initialDeployments = deployments.stream().filter(deployment ->
-							deployments.getFirst().isInitial() && !deployment.getInstances().isEmpty()).toList();
+					List<Gamemode> gamemodes = gamemodeManager.getGamemodes();
+					List<Gamemode> initialGamemodes = gamemodes.stream()
+							.filter(gamemode -> gamemode.isInitial() && !gamemode.getInstances().isEmpty())
+							.toList();
 
 					if (initialDeployments.isEmpty()) return;
 

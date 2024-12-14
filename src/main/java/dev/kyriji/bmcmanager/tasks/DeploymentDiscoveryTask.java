@@ -37,9 +37,8 @@ public class DeploymentDiscoveryTask {
 	public void discoverDeployments() {
 		DeploymentManager deploymentManager = BMCManager.deploymentManager;
 
-		List<Deployment> existingDeployments = deploymentManager.getDeployments();
-		System.out.println("Existing deployments: " + existingDeployments);
-		List<Deployment> newDeployments = new ArrayList<>();
+		List<Gamemode> existingGamemodes = gamemodeManager.getGamemodes();
+		List<Gamemode> newGamemodes = new ArrayList<>();
 
 		List<io.fabric8.kubernetes.api.model.apps.Deployment> k8sDeployments = client.apps().deployments()
 				.inNamespace("default")

@@ -1,28 +1,29 @@
 package dev.kyriji.bmcmanager;
 
-import dev.kyriji.bmcmanager.controllers.DeploymentManager;
-import dev.kyriji.bmcmanager.controllers.NetworkInstanceManager;
-import dev.kyriji.bmcmanager.tasks.DeploymentDiscoveryTask;
-import dev.kyriji.bmcmanager.tasks.InstanceListenerTask;
-import dev.kyriji.bmcmanager.tasks.PlayerListenerTask;
-import dev.kyriji.bmcmanager.tasks.ServerDiscoveryTask;
-import dev.kyriji.bmcmanager.controllers.RedisManager;
+import dev.kyriji.bmcmanager.controllers.*;
+import dev.kyriji.bmcmanager.tasks.*;
 
 public class BMCManager {
-	public static DeploymentManager deploymentManager;
+	public static GamemodeManager gamemodeManager;
+	public static ProxyManager proxyManager;
 	public static ServerDiscoveryTask serverDiscovery;
 	public static NetworkInstanceManager networkManager;
 	public static PlayerListenerTask playerListener;
-	public static DeploymentDiscoveryTask deploymentDiscovery;
+	public static GamemodeDiscoveryTask gamemodeDiscovery;
+	public static ProxyDiscoveryTask proxyDiscovery;
 	public static InstanceListenerTask instanceListener;
+	public static ScalingManager scalingManager;
 
 	public static void main(String[] args) {
 		RedisManager.init("redis-service", 6379);
-		deploymentManager = new DeploymentManager();
+		gamemodeManager = new GamemodeManager();
+		proxyManager = new ProxyManager();
 		networkManager = new NetworkInstanceManager();
 		serverDiscovery = new ServerDiscoveryTask(networkManager);
 		playerListener = new PlayerListenerTask();
-		deploymentDiscovery = new DeploymentDiscoveryTask();
+		gamemodeDiscovery = new GamemodeDiscoveryTask();
+		proxyDiscovery = new ProxyDiscoveryTask();
 		instanceListener = new InstanceListenerTask();
+		scalingManager = new ScalingManager();
 	}
 }

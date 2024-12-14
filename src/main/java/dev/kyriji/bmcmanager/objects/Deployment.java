@@ -1,7 +1,10 @@
 package dev.kyriji.bmcmanager.objects;
 
+import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.enums.QueueStrategy;
+import dev.kyriji.bmcmanager.enums.ScaleResult;
+import dev.kyriji.bmcmanager.interfaces.Scalable;
 import dev.wiji.bigminecraftapi.BigMinecraftAPI;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 
@@ -9,16 +12,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Deployment {
-
+public class Gamemode implements Scalable {
 	private final String name;
 	private final boolean isInitial;
 	private final QueueStrategy queueStrategy;
-	private final int maxPlayers;
+
+	private final ScalingSettings scalingSettings;
 
 	private final List<MinecraftInstance> instances;
 
-	public Deployment(io.fabric8.kubernetes.api.model.apps.Deployment deployment) {
+	private long lastScaleUp = 0;
+	private long lastScaleDown = 0;
+
+	public Gamemode(Deployment deployment) {
 		this.name = deployment.getMetadata().getName();
 
 		this.isInitial = Boolean.parseBoolean(deployment.getSpec().getTemplate().getMetadata().getLabels()
@@ -27,8 +33,7 @@ public class Deployment {
 		this.queueStrategy = QueueStrategy.getStrategy(deployment.getSpec().getTemplate().getMetadata().getLabels()
 				.get(DeploymentLabel.QUEUE_STRATEGY.getLabel()));
 
-		this.maxPlayers = Integer.parseInt(deployment.getSpec().getTemplate().getMetadata().getLabels()
-				.get(DeploymentLabel.MAX_PLAYERS.getLabel()));
+		this.scalingSettings = new ScalingSettings(deployment.getSpec().getTemplate().getMetadata().getLabels());
 
 		this.instances = new ArrayList<>();
 	}
@@ -41,8 +46,9 @@ public class Deployment {
 		}
 	}
 
-	public String getName() {
-		return name;
+	public void scale() {
+		ScaleResult result = BMCManager.scalingManager.checkToScale(this);
+		BMCManager.scalingManager.scale(this, result);
 	}
 
 	public boolean isInitial() {
@@ -53,24 +59,54 @@ public class Deployment {
 		return queueStrategy;
 	}
 
-	public List<MinecraftInstance> getInstances() {
-		return instances;
+	@Override
+	public String getName() {
+		return name;
 	}
 
-	public int getMaxPlayers() {
-		return maxPlayers;
+	@Override
+	public ScalingSettings getScalingSettings() {
+		return scalingSettings;
+	}
+
+	@Override
+	public List<MinecraftInstance> getInstances() {
+		return new ArrayList<>(instances);
+	}
+
+	@Override
+	public boolean isOnScaleUpCooldown() {
+		return System.currentTimeMillis() - lastScaleUp < scalingSettings.scaleUpCooldown * 1000;
+	}
+
+	@Override
+	public boolean isOnScaleDownCooldown() {
+		return System.currentTimeMillis() - lastScaleDown < scalingSettings.scaleDownCooldown * 1000;
+	}
+
+	@Override
+	public void setLastScaleUp(long lastScaleUp) {
+		this.lastScaleUp = lastScaleUp;
+	}
+
+	@Override
+	public void setLastScaleDown(long lastScaleDown) {
+		this.lastScaleDown = lastScaleDown;
 	}
 
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		Deployment deployment = (Deployment) o;
-		return Objects.equals(name, deployment.name);
+		Gamemode gamemode = (Gamemode) o;
+		return isInitial == gamemode.isInitial &&
+				Objects.equals(name, gamemode.name) &&
+				queueStrategy == gamemode.queueStrategy &&
+				Objects.equals(scalingSettings, gamemode.scalingSettings);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(name);
+		return Objects.hash(name, isInitial, queueStrategy, scalingSettings);
 	}
 }
