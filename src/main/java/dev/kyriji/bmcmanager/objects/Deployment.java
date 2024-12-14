@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Gamemode implements Scalable {
+public class Deployment implements Scalable {
 	private final String name;
 	private final boolean isInitial;
 	private final QueueStrategy queueStrategy;
@@ -24,7 +24,7 @@ public class Gamemode implements Scalable {
 	private long lastScaleUp = 0;
 	private long lastScaleDown = 0;
 
-	public Gamemode(Deployment deployment) {
+	public Deployment(io.fabric8.kubernetes.api.model.apps.Deployment deployment) {
 		this.name = deployment.getMetadata().getName();
 
 		this.isInitial = Boolean.parseBoolean(deployment.getSpec().getTemplate().getMetadata().getLabels()
@@ -42,7 +42,7 @@ public class Gamemode implements Scalable {
 		instances.clear();
 
 		for (MinecraftInstance instance : BigMinecraftAPI.getNetworkManager().getInstances()) {
-			if (instance.getGamemode().equals(name)) instances.add(instance);
+			if (instance.getDeployment().equals(name)) instances.add(instance);
 		}
 	}
 
@@ -98,11 +98,11 @@ public class Gamemode implements Scalable {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		Gamemode gamemode = (Gamemode) o;
-		return isInitial == gamemode.isInitial &&
-				Objects.equals(name, gamemode.name) &&
-				queueStrategy == gamemode.queueStrategy &&
-				Objects.equals(scalingSettings, gamemode.scalingSettings);
+		Deployment deployment = (Deployment) o;
+		return isInitial == deployment.isInitial &&
+				Objects.equals(name, deployment.name) &&
+				queueStrategy == deployment.queueStrategy &&
+				Objects.equals(scalingSettings, deployment.scalingSettings);
 	}
 
 	@Override

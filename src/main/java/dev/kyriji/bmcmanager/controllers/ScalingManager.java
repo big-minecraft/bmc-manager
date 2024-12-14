@@ -1,15 +1,11 @@
 package dev.kyriji.bmcmanager.controllers;
 
-import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.enums.ScaleStrategy;
 import dev.kyriji.bmcmanager.interfaces.Scalable;
-import dev.kyriji.bmcmanager.objects.Gamemode;
 import dev.kyriji.bmcmanager.objects.ScalingSettings;
-import dev.wiji.bigminecraftapi.BigMinecraftAPI;
 import dev.wiji.bigminecraftapi.enums.InstanceState;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
-import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
@@ -26,27 +22,27 @@ public class ScalingManager {
 		this.client = new KubernetesClientBuilder().build();
 	}
 
-	public ScaleResult checkToScale(Scalable gamemode) {
-		ScalingSettings settings = gamemode.getScalingSettings();
+	public ScaleResult checkToScale(Scalable deployment) {
+		ScalingSettings settings = deployment.getScalingSettings();
 		ScaleStrategy strategy = settings.strategy;
 
 		ScaleResult result = switch(strategy) {
-			case THRESHOLD -> checkToScaleThreshold(gamemode);
-			case TREND -> checkToScaleTrend(gamemode);
+			case THRESHOLD -> checkToScaleThreshold(deployment);
+			case TREND -> checkToScaleTrend(deployment);
 		};
 
-		int instances = getActiveInstanceCount(gamemode);
+		int instances = getActiveInstanceCount(deployment);
 
-		if(result == ScaleResult.UP && (instances >= settings.maxInstances || gamemode.isOnScaleUpCooldown())) return ScaleResult.NO_CHANGE;
-		else if(result == ScaleResult.DOWN && (instances <= settings.minInstances || gamemode.isOnScaleDownCooldown())) return ScaleResult.NO_CHANGE;
+		if(result == ScaleResult.UP && (instances >= settings.maxInstances || deployment.isOnScaleUpCooldown())) return ScaleResult.NO_CHANGE;
+		else if(result == ScaleResult.DOWN && (instances <= settings.minInstances || deployment.isOnScaleDownCooldown())) return ScaleResult.NO_CHANGE;
 
 		return result;
 	}
 
-	private ScaleResult checkToScaleThreshold(Scalable gamemode) {
-		int instances = getActiveInstanceCount(gamemode);
-		int playerCount = getPlayerCount(gamemode);
-		ScalingSettings settings = gamemode.getScalingSettings();
+	private ScaleResult checkToScaleThreshold(Scalable deployment) {
+		int instances = getActiveInstanceCount(deployment);
+		int playerCount = getPlayerCount(deployment);
+		ScalingSettings settings = deployment.getScalingSettings();
 
 		double playersPerInstance = (double) playerCount / instances;
 
@@ -56,44 +52,44 @@ public class ScalingManager {
 		return ScaleResult.NO_CHANGE;
 	}
 
-	private ScaleResult checkToScaleTrend(Scalable gamemode) {
+	private ScaleResult checkToScaleTrend(Scalable deployment) {
 
 		return ScaleResult.NO_CHANGE;
 	}
 
-	public void scale(Scalable gamemode, ScaleResult result) {
+	public void scale(Scalable deployment, ScaleResult result) {
 		if(result == ScaleResult.NO_CHANGE) return;
 
-		int targetInstances = getTargetInstances(gamemode, result);
-		int currentInstances = getActiveInstanceCount(gamemode);
+		int targetInstances = getTargetInstances(deployment, result);
+		int currentInstances = getActiveInstanceCount(deployment);
 
 		if(targetInstances == currentInstances) return;
 		else if(targetInstances < currentInstances) {
-			scaleDownInstances(gamemode.getInstances(), targetInstances);
-			gamemode.setLastScaleDown(System.currentTimeMillis());
-		} else gamemode.setLastScaleUp(System.currentTimeMillis());
+			scaleDownInstances(deployment.getInstances(), targetInstances);
+			deployment.setLastScaleDown(System.currentTimeMillis());
+		} else deployment.setLastScaleUp(System.currentTimeMillis());
 
 		/*
 		We only need to handle scaling down deployments so that we can choose which instances to remove.
 		Scaling up deployments is handled by the Kubernetes API.
 		 */
 
-		Deployment deployment = client.apps().deployments().inNamespace("default").withName(gamemode.getName()).get();
-		int currentReplicas = deployment.getSpec().getReplicas();
+		Deployment k8sDeployment = client.apps().deployments().inNamespace("default").withName(deployment.getName()).get();
+		int currentReplicas = k8sDeployment.getSpec().getReplicas();
 
-		// This indicates the gamemode is disabled
+		// This indicates the deployment is disabled
 		if(currentReplicas == 0) return;
 
-		client.apps().deployments().inNamespace("default").withName(gamemode.getName()).scale(targetInstances);
+		client.apps().deployments().inNamespace("default").withName(deployment.getName()).scale(targetInstances);
 	}
 
-	public int getTargetInstances(Scalable gamemode, ScaleResult result) {
-		int activeCurrentInstances = getActiveInstanceCount(gamemode);
-		int playerCount = getPlayerCount(gamemode);
+	public int getTargetInstances(Scalable deployment, ScaleResult result) {
+		int activeCurrentInstances = getActiveInstanceCount(deployment);
+		int playerCount = getPlayerCount(deployment);
 
 		int instancesToAdd = 0;
 
-		ScalingSettings settings = gamemode.getScalingSettings();
+		ScalingSettings settings = deployment.getScalingSettings();
 
 		if(result == ScaleResult.UP) {
 			int scaleUpLimit = settings.scaleUpLimit;
@@ -120,7 +116,7 @@ public class ScalingManager {
 			}
 		}
 
-		return gamemode.getInstances().size() + instancesToAdd;
+		return deployment.getInstances().size() + instancesToAdd;
 	}
 
 	public void scaleDownInstances(List<MinecraftInstance> instances, int targetSize) {
@@ -138,8 +134,8 @@ public class ScalingManager {
 		}
 	}
 
-	public int getPlayerCount(Scalable gamemode) {
-		List<MinecraftInstance> instances = gamemode.getInstances();
+	public int getPlayerCount(Scalable deployment) {
+		List<MinecraftInstance> instances = deployment.getInstances();
 		int totalPlayers = 0;
 		for (MinecraftInstance instance : instances) {
 			totalPlayers += instance.getPlayers().size();
@@ -147,8 +143,8 @@ public class ScalingManager {
 		return totalPlayers;
 	}
 
-	public int getActiveInstanceCount(Scalable gamemode) {
-		return gamemode.getInstances().stream().filter(instance -> instance.getState() == InstanceState.RUNNING).toList().size();
+	public int getActiveInstanceCount(Scalable deployment) {
+		return deployment.getInstances().stream().filter(instance -> instance.getState() == InstanceState.RUNNING).toList().size();
 	}
 }
 

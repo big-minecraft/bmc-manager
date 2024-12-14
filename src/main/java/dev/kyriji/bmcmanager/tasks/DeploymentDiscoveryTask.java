@@ -24,7 +24,7 @@ public class DeploymentDiscoveryTask {
 				public void onMessage(String channel, String message) {
 					discoverDeployments();
 				}
-			}, RedisChannel.GAMEMODE_MODIFIED.getRef());
+			}, RedisChannel.DEPLOYMENT_MODIFIED.getRef());
 		}).start();
 
 		new Thread(() -> {
@@ -37,8 +37,8 @@ public class DeploymentDiscoveryTask {
 	public void discoverDeployments() {
 		DeploymentManager deploymentManager = BMCManager.deploymentManager;
 
-		List<Gamemode> existingGamemodes = gamemodeManager.getGamemodes();
-		List<Gamemode> newGamemodes = new ArrayList<>();
+		List<Deployment> existingDeployments = deploymentManager.getDeployments();
+		List<Deployment> newDeployments = new ArrayList<>();
 
 		List<io.fabric8.kubernetes.api.model.apps.Deployment> k8sDeployments = client.apps().deployments()
 				.inNamespace("default")
@@ -55,11 +55,11 @@ public class DeploymentDiscoveryTask {
 				.toList();
 
 		k8sDeployments.forEach(k8sDeployment -> {
-			Deployment gamemode = new Deployment(k8sDeployment);
-			if(existingDeployments.contains(gamemode)) {
-				existingDeployments.remove(gamemode);
+			Deployment deployment = new Deployment(k8sDeployment);
+			if(existingDeployments.contains(deployment)) {
+				existingDeployments.remove(deployment);
 			} else {
-				newDeployments.add(gamemode);
+				newDeployments.add(deployment);
 			}
 		});
 

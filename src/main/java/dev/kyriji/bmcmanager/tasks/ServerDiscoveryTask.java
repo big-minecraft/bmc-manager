@@ -63,7 +63,7 @@ public class ServerDiscoveryTask {
 			networkInstanceManager.unregisterInstance(uid);
 		}
 
-		BMCManager.gamemodeManager.getGamemodes().forEach(Gamemode::fetchInstances);
+		BMCManager.deploymentManager.getDeployments().forEach(Deployment::fetchInstances);
 		if(BMCManager.proxyManager.proxyDeployment != null) BMCManager.proxyManager.getProxyDeployment().fetchInstances();
 	}
 

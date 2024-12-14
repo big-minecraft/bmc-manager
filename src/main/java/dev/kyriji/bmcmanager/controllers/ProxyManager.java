@@ -1,10 +1,6 @@
 package dev.kyriji.bmcmanager.controllers;
 
-import dev.kyriji.bmcmanager.objects.Gamemode;
 import dev.kyriji.bmcmanager.objects.Proxy;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class ProxyManager {
 

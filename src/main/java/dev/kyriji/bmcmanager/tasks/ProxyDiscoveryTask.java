@@ -3,8 +3,6 @@ package dev.kyriji.bmcmanager.tasks;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.ProxyManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
-import dev.kyriji.bmcmanager.enums.DeploymentLabel;
-import dev.kyriji.bmcmanager.objects.Gamemode;
 import dev.kyriji.bmcmanager.objects.Proxy;
 import dev.wiji.bigminecraftapi.enums.RedisChannel;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
@@ -40,7 +38,7 @@ public class ProxyDiscoveryTask {
 	public void updateProxy() {
 		ProxyManager proxyManager = BMCManager.proxyManager;
 
-		List<Deployment> deployments = client.apps().deployments()
+		List<io.fabric8.kubernetes.api.model.apps.Deployment> deployments = client.apps().deployments()
 				.inNamespace("default")
 				.list()
 				.getItems()
@@ -52,7 +50,7 @@ public class ProxyDiscoveryTask {
 			throw new RuntimeException("Expected 1 proxy deployment, found " + deployments.size());
 		}
 
-		Deployment deployment = deployments.get(0);
+		Deployment deployment = deployments.getFirst();
 		Proxy proxy = new Proxy(deployment);
 
 		proxy.fetchInstances();

@@ -11,6 +11,13 @@ public class DeploymentManager {
 
 	public DeploymentManager() {
 		this.deployments = new ArrayList<>();
+
+		new Thread(() -> {
+			while (true) {
+				for(Deployment deployment : deployments) deployment.scale();
+				try { Thread.sleep(1000); } catch (InterruptedException e) { e.printStackTrace(); }
+			}
+		}).start();
 	}
 
 	public void registerDeployment(Deployment deployment) {
@@ -28,7 +35,9 @@ public class DeploymentManager {
 	}
 
 	public Deployment getDeployment(String name) {
-		for (Deployment deployment : deployments) if (deployment.getName().equals(name)) return deployment;
+		for (Deployment deployment : deployments) {
+			if (deployment.getName().equals(name)) return deployment;
+		}
 		return null;
 	}
 }
