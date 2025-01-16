@@ -1,5 +1,7 @@
 package dev.kyriji.bmcmanager.controllers;
 
+import com.google.gson.Gson;
+import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.enums.ScaleStrategy;
 import dev.kyriji.bmcmanager.interfaces.Scalable;
@@ -125,12 +127,14 @@ public class ScalingManager {
 		int instancesToRemove = instances.size() - targetSize;
 
 		instances.sort(Comparator.comparingInt(instance -> instance.getPlayers().size()));
+		Gson gson = new Gson();
 
 		for(MinecraftInstance instance : instances.subList(0, instancesToRemove)) {
 			PodResource pod = client.pods().inNamespace("default").withName(instance.getPodName());
 			pod.delete();
 
-			//TODO: Set pod state to Stopping
+			instance.setState(InstanceState.STOPPING);
+			RedisManager.get().hset("instances", instance.getUid(), gson.toJson(instance));
 		}
 	}
 
