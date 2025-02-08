@@ -5,6 +5,7 @@ import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.DeploymentManager;
 import dev.kyriji.bmcmanager.controllers.QueueManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
+import dev.kyriji.bmcmanager.controllers.ScalingManager;
 import dev.kyriji.bmcmanager.objects.Deployment;
 import dev.wiji.bigminecraftapi.enums.InstanceState;
 import dev.wiji.bigminecraftapi.enums.RedisChannel;
@@ -39,6 +40,10 @@ public class InstanceListenerTask {
 
 					if(instance == null) return;
 					instance.setState(state);
+
+					if(state == InstanceState.STOPPING || state == InstanceState.STOPPED) {
+						BMCManager.scalingManager.turnOffPod(instance);
+					}
 
 					RedisManager.get().hset("instances", instanceUid.toString(), gson.toJson(instance));
 					Deployment deployment = deploymentManager.getDeployment(instance.getDeployment());

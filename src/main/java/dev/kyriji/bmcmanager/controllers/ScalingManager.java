@@ -150,6 +150,11 @@ public class ScalingManager {
 	public int getActiveInstanceCount(Scalable deployment) {
 		return deployment.getInstances().stream().filter(instance -> instance.getState() == InstanceState.RUNNING).toList().size();
 	}
+
+	public void turnOffPod(MinecraftInstance instance) {
+		PodResource pod = client.pods().inNamespace("default").withName(instance.getPodName());
+		pod.delete();
+	}
 }
 
 
