@@ -7,12 +7,13 @@ import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.interfaces.Scalable;
 import dev.wiji.bigminecraftapi.BigMinecraftAPI;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Deployment implements Scalable {
+public class Game implements Scalable {
 	private final String name;
 	private final boolean isInitial;
 	private final QueueStrategy queueStrategy;
@@ -24,7 +25,7 @@ public class Deployment implements Scalable {
 	private long lastScaleUp = 0;
 	private long lastScaleDown = 0;
 
-	public Deployment(io.fabric8.kubernetes.api.model.apps.Deployment deployment) {
+	public Game(Deployment deployment) {
 		this.name = deployment.getMetadata().getName();
 
 		this.isInitial = Boolean.parseBoolean(deployment.getSpec().getTemplate().getMetadata().getLabels()
@@ -98,11 +99,11 @@ public class Deployment implements Scalable {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		Deployment deployment = (Deployment) o;
-		return isInitial == deployment.isInitial &&
-				Objects.equals(name, deployment.name) &&
-				queueStrategy == deployment.queueStrategy &&
-				Objects.equals(scalingSettings, deployment.scalingSettings);
+		Game game = (Game) o;
+		return isInitial == game.isInitial &&
+				Objects.equals(name, game.name) &&
+				queueStrategy == game.queueStrategy &&
+				Objects.equals(scalingSettings, game.scalingSettings);
 	}
 
 	@Override

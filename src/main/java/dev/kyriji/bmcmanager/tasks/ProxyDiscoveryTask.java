@@ -38,7 +38,7 @@ public class ProxyDiscoveryTask {
 	public void updateProxy() {
 		ProxyManager proxyManager = BMCManager.proxyManager;
 
-		List<io.fabric8.kubernetes.api.model.apps.Deployment> deployments = client.apps().deployments()
+		List<Deployment> deployments = client.apps().deployments()
 				.inNamespace("default")
 				.list()
 				.getItems()

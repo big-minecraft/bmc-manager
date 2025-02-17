@@ -2,11 +2,10 @@ package dev.kyriji.bmcmanager.tasks;
 
 import com.google.gson.Gson;
 import dev.kyriji.bmcmanager.BMCManager;
-import dev.kyriji.bmcmanager.controllers.DeploymentManager;
+import dev.kyriji.bmcmanager.controllers.GameManager;
 import dev.kyriji.bmcmanager.controllers.QueueManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
-import dev.kyriji.bmcmanager.controllers.ScalingManager;
-import dev.kyriji.bmcmanager.objects.Deployment;
+import dev.kyriji.bmcmanager.objects.Game;
 import dev.wiji.bigminecraftapi.enums.InstanceState;
 import dev.wiji.bigminecraftapi.enums.RedisChannel;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
@@ -19,7 +18,7 @@ public class InstanceListenerTask {
 	Gson gson = new Gson();
 
 	public InstanceListenerTask() {
-		DeploymentManager deploymentManager = BMCManager.deploymentManager;
+		GameManager gameManager = BMCManager.gameManager;
 
 		new Thread(() -> {
 			RedisManager.get().subscribe(new JedisPubSub() {
@@ -46,10 +45,10 @@ public class InstanceListenerTask {
 					}
 
 					RedisManager.get().hset("instances", instanceUid.toString(), gson.toJson(instance));
-					Deployment deployment = deploymentManager.getDeployment(instance.getDeployment());
-					if(deployment == null) return;
+					Game game = gameManager.getGame(instance.getDeployment());
+					if(game == null) return;
 
-					deployment.fetchInstances();
+					game.fetchInstances();
 				}
 			}, RedisChannel.INSTANCE_STATE_CHANGE.getRef());
 		}).start();
@@ -58,15 +57,15 @@ public class InstanceListenerTask {
 			RedisManager.get().subscribe(new JedisPubSub() {
 				@Override
 				public void onMessage(String channel, String message) {
-					List<Deployment> deployments = deploymentManager.getDeployments();
-					List<Deployment> initialDeployments = deployments.stream()
-							.filter(deployment -> deployment.isInitial() && !deployment.getInstances().isEmpty())
+					List<Game> games = gameManager.getGames();
+					List<Game> initialGames = games.stream()
+							.filter(game -> game.isInitial() && !game.getInstances().isEmpty())
 							.toList();
 
-					if (initialDeployments.isEmpty()) return;
+					if (initialGames.isEmpty()) return;
 
-					Deployment deployment = initialDeployments.get((int) (Math.random() * initialDeployments.size()));
-					MinecraftInstance instance = QueueManager.findInstance(deployment);
+					Game game = initialGames.get((int) (Math.random() * initialGames.size()));
+					MinecraftInstance instance = QueueManager.findInstance(game);
 
 					if (instance != null) {
 						RedisManager.get().publish(RedisChannel.INITIAL_INSTANCE_RESPONSE.getRef(), message + ":" + instance.getName());
@@ -83,14 +82,14 @@ public class InstanceListenerTask {
 					UUID playerId = UUID.fromString(parts[0]);
 					String deploymentString = parts[1];
 
-					Deployment deployment = deploymentManager.getDeployment(deploymentString);
-					if(deployment == null) {
+					Game game = gameManager.getGame(deploymentString);
+					if(game == null) {
 						//Used to send back an error to the proxy
 						QueueManager.sendPlayerToInstance(playerId, null);
 						return;
 					}
 
-					QueueManager.queuePlayer(playerId, deployment);
+					QueueManager.queuePlayer(playerId, game);
 				}
 			}, RedisChannel.QUEUE_PLAYER.getRef());
 		}).start();

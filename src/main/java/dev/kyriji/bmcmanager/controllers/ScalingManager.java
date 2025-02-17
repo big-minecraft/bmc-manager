@@ -1,7 +1,6 @@
 package dev.kyriji.bmcmanager.controllers;
 
 import com.google.gson.Gson;
-import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.enums.ScaleStrategy;
 import dev.kyriji.bmcmanager.interfaces.Scalable;
@@ -24,27 +23,29 @@ public class ScalingManager {
 		this.client = new KubernetesClientBuilder().build();
 	}
 
-	public ScaleResult checkToScale(Scalable deployment) {
-		ScalingSettings settings = deployment.getScalingSettings();
+	public ScaleResult checkToScale(Scalable scalableGame) {
+		ScalingSettings settings = scalableGame.getScalingSettings();
 		ScaleStrategy strategy = settings.strategy;
 
 		ScaleResult result = switch(strategy) {
-			case THRESHOLD -> checkToScaleThreshold(deployment);
-			case TREND -> checkToScaleTrend(deployment);
+			case THRESHOLD -> checkToScaleThreshold(scalableGame);
+			case TREND -> checkToScaleTrend(scalableGame);
 		};
 
-		int instances = getActiveInstanceCount(deployment);
+		int instances = getActiveInstanceCount(scalableGame);
 
-		if(result == ScaleResult.UP && (instances >= settings.maxInstances || deployment.isOnScaleUpCooldown())) return ScaleResult.NO_CHANGE;
-		else if(result == ScaleResult.DOWN && (instances <= settings.minInstances || deployment.isOnScaleDownCooldown())) return ScaleResult.NO_CHANGE;
+		if(result == ScaleResult.UP && (instances >= settings.maxInstances || scalableGame.isOnScaleUpCooldown()))
+			return ScaleResult.NO_CHANGE;
+		else if(result == ScaleResult.DOWN && (instances <= settings.minInstances || scalableGame.isOnScaleDownCooldown()))
+			return ScaleResult.NO_CHANGE;
 
 		return result;
 	}
 
-	private ScaleResult checkToScaleThreshold(Scalable deployment) {
-		int instances = getActiveInstanceCount(deployment);
-		int playerCount = getPlayerCount(deployment);
-		ScalingSettings settings = deployment.getScalingSettings();
+	private ScaleResult checkToScaleThreshold(Scalable scalableGame) {
+		int instances = getActiveInstanceCount(scalableGame);
+		int playerCount = getPlayerCount(scalableGame);
+		ScalingSettings settings = scalableGame.getScalingSettings();
 
 		double playersPerInstance = (double) playerCount / instances;
 
@@ -54,44 +55,44 @@ public class ScalingManager {
 		return ScaleResult.NO_CHANGE;
 	}
 
-	private ScaleResult checkToScaleTrend(Scalable deployment) {
+	private ScaleResult checkToScaleTrend(Scalable scalableGame) {
 
 		return ScaleResult.NO_CHANGE;
 	}
 
-	public void scale(Scalable deployment, ScaleResult result) {
+	public void scale(Scalable scalableGame, ScaleResult result) {
 		if(result == ScaleResult.NO_CHANGE) return;
 
-		int targetInstances = getTargetInstances(deployment, result);
-		int currentInstances = getActiveInstanceCount(deployment);
+		int targetInstances = getTargetInstances(scalableGame, result);
+		int currentInstances = getActiveInstanceCount(scalableGame);
 
 		if(targetInstances == currentInstances) return;
 		else if(targetInstances < currentInstances) {
-			scaleDownInstances(deployment.getInstances(), targetInstances);
-			deployment.setLastScaleDown(System.currentTimeMillis());
-		} else deployment.setLastScaleUp(System.currentTimeMillis());
+			scaleDownInstances(scalableGame.getInstances(), targetInstances);
+			scalableGame.setLastScaleDown(System.currentTimeMillis());
+		} else scalableGame.setLastScaleUp(System.currentTimeMillis());
 
 		/*
-		We only need to handle scaling down deployments so that we can choose which instances to remove.
-		Scaling up deployments is handled by the Kubernetes API.
+		We only need to handle scaling down games so that we can choose which instances to remove.
+		Scaling up games is handled by the Kubernetes API.
 		 */
 
-		Deployment k8sDeployment = client.apps().deployments().inNamespace("default").withName(deployment.getName()).get();
+		Deployment k8sDeployment = client.apps().deployments().inNamespace("default").withName(scalableGame.getName()).get();
 		int currentReplicas = k8sDeployment.getSpec().getReplicas();
 
 		// This indicates the deployment is disabled
 		if(currentReplicas == 0) return;
 
-		client.apps().deployments().inNamespace("default").withName(deployment.getName()).scale(targetInstances);
+		client.apps().deployments().inNamespace("default").withName(scalableGame.getName()).scale(targetInstances);
 	}
 
-	public int getTargetInstances(Scalable deployment, ScaleResult result) {
-		int activeCurrentInstances = getActiveInstanceCount(deployment);
-		int playerCount = getPlayerCount(deployment);
+	public int getTargetInstances(Scalable scalableGame, ScaleResult result) {
+		int activeCurrentInstances = getActiveInstanceCount(scalableGame);
+		int playerCount = getPlayerCount(scalableGame);
 
 		int instancesToAdd = 0;
 
-		ScalingSettings settings = deployment.getScalingSettings();
+		ScalingSettings settings = scalableGame.getScalingSettings();
 
 		if(result == ScaleResult.UP) {
 			int scaleUpLimit = settings.scaleUpLimit;
@@ -118,7 +119,7 @@ public class ScalingManager {
 			}
 		}
 
-		return deployment.getInstances().size() + instancesToAdd;
+		return scalableGame.getInstances().size() + instancesToAdd;
 	}
 
 	public void scaleDownInstances(List<MinecraftInstance> instances, int targetSize) {
@@ -138,8 +139,8 @@ public class ScalingManager {
 		}
 	}
 
-	public int getPlayerCount(Scalable deployment) {
-		List<MinecraftInstance> instances = deployment.getInstances();
+	public int getPlayerCount(Scalable scalableGame) {
+		List<MinecraftInstance> instances = scalableGame.getInstances();
 		int totalPlayers = 0;
 		for (MinecraftInstance instance : instances) {
 			totalPlayers += instance.getPlayers().size();
@@ -147,8 +148,8 @@ public class ScalingManager {
 		return totalPlayers;
 	}
 
-	public int getActiveInstanceCount(Scalable deployment) {
-		return deployment.getInstances().stream().filter(instance -> instance.getState() == InstanceState.RUNNING).toList().size();
+	public int getActiveInstanceCount(Scalable scalableGame) {
+		return scalableGame.getInstances().stream().filter(instance -> instance.getState() == InstanceState.RUNNING).toList().size();
 	}
 
 	public void turnOffPod(MinecraftInstance instance) {

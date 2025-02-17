@@ -25,13 +25,13 @@ public class NetworkInstanceManager {
 		RedisManager.get().publish(RedisChannel.INSTANCE_MODIFIED.getRef(), "");
 	}
 
-	public void registerProxy(MinecraftInstance proxy) {
+	public void registerProxyInstance(MinecraftInstance proxy) {
 		proxyIpToUUID.put(proxy.getIp(), UUID.fromString(proxy.getUid()));
 		RedisManager.get().hset("proxies", proxy.getUid(), gson.toJson(proxy));
 		RedisManager.get().publish(RedisChannel.PROXY_REGISTER.getRef(), gson.toJson(proxy));
 	}
 
-	public void registerInstance(MinecraftInstance instance) {
+	public void registerGameInstance(MinecraftInstance instance) {
 		instanceIpToUUID.put(instance.getIp(), UUID.fromString(instance.getUid()));
 		RedisManager.get().hset("instances", instance.getUid(), gson.toJson(instance));
 

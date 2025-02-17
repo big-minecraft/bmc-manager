@@ -1,28 +1,29 @@
 package dev.kyriji.bmcmanager.tasks;
 
 import dev.kyriji.bmcmanager.BMCManager;
-import dev.kyriji.bmcmanager.controllers.DeploymentManager;
+import dev.kyriji.bmcmanager.controllers.GameManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
-import dev.kyriji.bmcmanager.objects.Deployment;
+import dev.kyriji.bmcmanager.objects.Game;
 import dev.wiji.bigminecraftapi.enums.RedisChannel;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import redis.clients.jedis.JedisPubSub;
 
 import java.util.*;
 
-public class DeploymentDiscoveryTask {
+public class GameDiscoveryTask {
 	private final KubernetesClient client;
 
-	public DeploymentDiscoveryTask() {
+	public GameDiscoveryTask() {
 		this.client = new KubernetesClientBuilder().build();
 
 		new Thread(() -> {
 			RedisManager.get().subscribe(new JedisPubSub() {
 				@Override
 				public void onMessage(String channel, String message) {
-					discoverDeployments();
+					discoverGames();
 				}
 			}, RedisChannel.DEPLOYMENT_MODIFIED.getRef());
 		}).start();
@@ -30,17 +31,17 @@ public class DeploymentDiscoveryTask {
 		new Thread(() -> {
 			//Sleep to ensure that ServerDiscoveryTask has had time to register all instances
 			try { Thread.sleep(5000); } catch(InterruptedException e) { throw new RuntimeException(e); }
-			discoverDeployments();
+			discoverGames();
 		}).start();
 	}
 
-	public void discoverDeployments() {
-		DeploymentManager deploymentManager = BMCManager.deploymentManager;
+	public void discoverGames() {
+		GameManager gameManager = BMCManager.gameManager;
 
-		List<Deployment> existingDeployments = deploymentManager.getDeployments();
-		List<Deployment> newDeployments = new ArrayList<>();
+		List<Game> existingGames = gameManager.getGames();
+		List<Game> newGames = new ArrayList<>();
 
-		List<io.fabric8.kubernetes.api.model.apps.Deployment> k8sDeployments = client.apps().deployments()
+		List<Deployment> gameDeployments = client.apps().deployments()
 				.inNamespace("default")
 				.list()
 				.getItems()
@@ -54,17 +55,17 @@ public class DeploymentDiscoveryTask {
 										.get(DeploymentLabel.SERVER_DISCOVERY.getLabel())))
 				.toList();
 
-		k8sDeployments.forEach(k8sDeployment -> {
-			Deployment deployment = new Deployment(k8sDeployment);
-			if(existingDeployments.contains(deployment)) {
-				existingDeployments.remove(deployment);
+		gameDeployments.forEach(deployment -> {
+			Game game = new Game(deployment);
+			if(existingGames.contains(game)) {
+				existingGames.remove(game);
 			} else {
-				newDeployments.add(deployment);
+				newGames.add(game);
 			}
 		});
 
-		for(Deployment existingDeployment : existingDeployments) deploymentManager.unregisterDeployment(existingDeployment);
-		for(Deployment newDeployment : newDeployments) deploymentManager.registerDeployment(newDeployment);
-		for(Deployment deployment : deploymentManager.getDeployments()) deployment.fetchInstances();
+		for(Game existingGame : existingGames) gameManager.unregisterGame(existingGame);
+		for(Game newGame : newGames) gameManager.registerGame(newGame);
+		for(Game game : gameManager.getGames()) game.fetchInstances();
 	}
 }

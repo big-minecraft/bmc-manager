@@ -3,25 +3,24 @@ package dev.kyriji.bmcmanager.controllers;
 import dev.kyriji.bmcmanager.objects.Proxy;
 
 public class ProxyManager {
-
-	public Proxy proxyDeployment;
+	public Proxy proxy;
 
 	public ProxyManager() {
-		proxyDeployment = null;
+		proxy = null;
 
 		new Thread(() -> {
 			while (true) {
-				if (proxyDeployment != null) proxyDeployment.scale();
+				if (proxy != null) proxy.scale();
 				try { Thread.sleep(1000); } catch (InterruptedException e) { e.printStackTrace(); }
 			}
 		}).start();
 	}
 
-	public Proxy getProxyDeployment() {
-		return proxyDeployment;
+	public Proxy getProxy() {
+		return proxy;
 	}
 
 	public void updateProxy(Proxy proxy) {
-		proxyDeployment = proxy;
+		this.proxy = proxy;
 	}
 }

@@ -4,7 +4,7 @@ import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.factories.MinecraftInstanceFactory;
 import dev.kyriji.bmcmanager.controllers.NetworkInstanceManager;
-import dev.kyriji.bmcmanager.objects.Deployment;
+import dev.kyriji.bmcmanager.objects.Game;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -51,9 +51,9 @@ public class ServerDiscoveryTask {
 			if (diff(pod)) {
 				MinecraftInstance instance = MinecraftInstanceFactory.createFromPod(pod);
 				if (isProxy) {
-					networkInstanceManager.registerProxy(instance);
+					networkInstanceManager.registerProxyInstance(instance);
 				} else {
-					networkInstanceManager.registerInstance(instance);
+					networkInstanceManager.registerGameInstance(instance);
 				}
 			}
 		});
@@ -63,8 +63,8 @@ public class ServerDiscoveryTask {
 			networkInstanceManager.unregisterInstance(uid);
 		}
 
-		BMCManager.deploymentManager.getDeployments().forEach(Deployment::fetchInstances);
-		if(BMCManager.proxyManager.proxyDeployment != null) BMCManager.proxyManager.getProxyDeployment().fetchInstances();
+		BMCManager.gameManager.getGames().forEach(Game::fetchInstances);
+		if(BMCManager.proxyManager.proxy != null) BMCManager.proxyManager.getProxy().fetchInstances();
 	}
 
 	private boolean diff(Pod pod) {

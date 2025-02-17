@@ -1,7 +1,7 @@
 package dev.kyriji.bmcmanager.controllers;
 
 import dev.kyriji.bmcmanager.enums.QueueStrategy;
-import dev.kyriji.bmcmanager.objects.Deployment;
+import dev.kyriji.bmcmanager.objects.Game;
 import dev.wiji.bigminecraftapi.enums.InstanceState;
 import dev.wiji.bigminecraftapi.enums.RedisChannel;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
@@ -11,28 +11,28 @@ import java.util.UUID;
 
 public class QueueManager {
 
-	public static void queuePlayer(UUID player, Deployment deployment) {
-		MinecraftInstance selectedInstance = findInstance(deployment);
+	public static void queuePlayer(UUID player, Game game) {
+		MinecraftInstance selectedInstance = findInstance(game);
 
 		sendPlayerToInstance(player, selectedInstance);
 	}
 
-	public static MinecraftInstance findInstance(Deployment deployment) {
-		QueueStrategy strategy = deployment.getQueueStrategy();
+	public static MinecraftInstance findInstance(Game game) {
+		QueueStrategy strategy = game.getQueueStrategy();
 
 		return switch(strategy) {
-			case SPREAD -> findSpreadInstance(deployment);
-			case FILL -> findFillInstance(deployment);
+			case SPREAD -> findSpreadInstance(game);
+			case FILL -> findFillInstance(game);
 		};
 	}
 
-	private static MinecraftInstance findSpreadInstance(Deployment deployment) {
-		List<MinecraftInstance> instances = deployment.getInstances();
+	private static MinecraftInstance findSpreadInstance(Game game) {
+		List<MinecraftInstance> instances = game.getInstances();
 		MinecraftInstance bestInstance = null;
 		int bestPlayerCount = Integer.MAX_VALUE;
 
 		for (MinecraftInstance instance : instances) {
-			if (instance.getPlayers().size() >= deployment.getScalingSettings().maxPlayers) continue;
+			if (instance.getPlayers().size() >= game.getScalingSettings().maxPlayers) continue;
 			if (instance.getState() != InstanceState.RUNNING) continue;
 
 			if (instance.getPlayers().size() < bestPlayerCount) {
@@ -44,15 +44,15 @@ public class QueueManager {
 		return bestInstance;
 	}
 
-	private static MinecraftInstance findFillInstance(Deployment deployment) {
-		List<MinecraftInstance> instances = deployment.getInstances();
+	private static MinecraftInstance findFillInstance(Game game) {
+		List<MinecraftInstance> instances = game.getInstances();
 		MinecraftInstance bestInstance = null;
 		int bestPlayerCount = 0;
 
 		for (MinecraftInstance instance : instances) {
 			if (instance.getState() != InstanceState.RUNNING) continue;
 
-			if (instance.getPlayers().size() < deployment.getScalingSettings().maxPlayers &&
+			if (instance.getPlayers().size() < game.getScalingSettings().maxPlayers &&
 					instance.getPlayers().size() >= bestPlayerCount) {
 				bestInstance = instance;
 				bestPlayerCount = instance.getPlayers().size();
