@@ -7,6 +7,8 @@ import redis.clients.jedis.JedisPubSub;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class RedisManager {
 	private static RedisManager instance;
@@ -36,50 +38,48 @@ public class RedisManager {
 	}
 
 	private void testConnection() {
-		try (Jedis jedis = jedisPool.getResource()) {
+		withRedis(jedis -> {
 			String pong = jedis.ping();
 			if (!"PONG".equals(pong)) {
 				System.out.println("Failed to connect to Redis");
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.out.println("An error occurred while connecting to Redis");
+		});
+	}
+
+	public void withRedis(Consumer<Jedis> jedisConsumer) {
+		try (Jedis jedis = jedisPool.getResource()) {
+			jedisConsumer.accept(jedis);
 		}
 	}
 
 	public void del(String key) {
-		try (Jedis jedis = jedisPool.getResource()) {
-			jedis.del(key);
-		}
+		withRedis(jedis -> jedis.del(key));
 	}
 
 	public void hset(String key, String field, String value) {
-		try (Jedis jedis = jedisPool.getResource()) {
-			jedis.hset(key, field, value);
-		}
+		withRedis(jedis -> jedis.hset(key, field, value));
 	}
 
 	public void hdel(String key, String field) {
-		try (Jedis jedis = jedisPool.getResource()) {
-			jedis.hdel(key, field);
-		}
+		withRedis(jedis -> jedis.hdel(key, field));
 	}
 
 	public Map<String, String> hgetAll(String key) {
+		//TODO: dd
 		try (Jedis jedis = jedisPool.getResource()) {
 			return jedis.hgetAll(key);
 		}
 	}
 
 	public void publish(String channel, String message) {
-		try (Jedis jedis = jedisPool.getResource()) {
-			jedis.publish(channel, message);
-		}
+		withRedis(jedis -> jedis.publish(channel, message));
 	}
 
 	public void subscribe(JedisPubSub jedisPubSub, String... channels) {
-		try (Jedis jedis = jedisPool.getResource()) {
-			jedis.subscribe(jedisPubSub, channels);
-		}
+		withRedis(jedis -> jedis.subscribe(jedisPubSub, channels));
+	}
+
+	public void clear() {
+		withRedis(Jedis::flushAll);
 	}
 }

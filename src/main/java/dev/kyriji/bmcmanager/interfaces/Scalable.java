@@ -7,10 +7,6 @@ import java.util.List;
 
 public interface Scalable {
 
-	String getName();
-
-	List<MinecraftInstance> getInstances();
-
 	ScalingSettings getScalingSettings();
 
 	boolean isOnScaleUpCooldown();

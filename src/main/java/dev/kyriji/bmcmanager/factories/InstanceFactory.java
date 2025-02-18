@@ -1,22 +1,26 @@
 package dev.kyriji.bmcmanager.factories;
 
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
+import dev.kyriji.bmcmanager.enums.DeploymentType;
+import dev.wiji.bigminecraftapi.objects.Instance;
 import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.Pod;
 
-public class MinecraftInstanceFactory {
+public class InstanceFactory {
 
-	public static MinecraftInstance createFromPod(Pod pod) {
+	public static Instance createFromPod(Pod pod) {
+		DeploymentType type = DeploymentType.getType(pod.getMetadata().getLabels().get(DeploymentLabel.DEPLOYMENT_TYPE.getLabel()));
+		if(type == null) return null;
+
 		String name = generateName(pod);
 		String podName = pod.getMetadata().getName();
 		String uid = pod.getMetadata().getUid();
 		String ip = pod.getStatus().getPodIP();
 		String deployment = pod.getMetadata().getLabels().get("app");
 
-		String initialServerTag = pod.getMetadata().getLabels().get(DeploymentLabel.INITIAL_SERVER.getLabel());
-		boolean initialServer = initialServerTag != null && initialServerTag.equals("true");
-
-		return new MinecraftInstance(uid, name, podName, ip, deployment, initialServer);
+		return switch(type) {
+			case SCALABLE, PERSISTENT, PROXY -> new MinecraftInstance(uid, name, podName, ip, deployment);
+		};
 	}
 
 	private static String generateName(Pod pod) {

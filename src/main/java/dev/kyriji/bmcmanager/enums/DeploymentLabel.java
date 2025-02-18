@@ -2,6 +2,7 @@ package dev.kyriji.bmcmanager.enums;
 
 public enum DeploymentLabel {
 
+	DEPLOYMENT_TYPE(getPrefix() + "deployment-type"),
 	SERVER_DISCOVERY(getPrefix() + "enable-server-discovery"),
 	PANEL_DISCOVERY(getPrefix() + "enable-panel-discovery"),
 	INITIAL_SERVER(getPrefix() + "initial-server"),

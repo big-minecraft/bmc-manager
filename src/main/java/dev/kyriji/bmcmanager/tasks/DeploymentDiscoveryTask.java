@@ -1,10 +1,11 @@
 package dev.kyriji.bmcmanager.tasks;
 
 import dev.kyriji.bmcmanager.BMCManager;
-import dev.kyriji.bmcmanager.controllers.GameManager;
+import dev.kyriji.bmcmanager.controllers.DeploymentManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
-import dev.kyriji.bmcmanager.objects.Game;
+import dev.kyriji.bmcmanager.enums.DeploymentType;
+import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
 import dev.wiji.bigminecraftapi.enums.RedisChannel;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -13,17 +14,17 @@ import redis.clients.jedis.JedisPubSub;
 
 import java.util.*;
 
-public class GameDiscoveryTask {
+public class DeploymentDiscoveryTask {
 	private final KubernetesClient client;
 
-	public GameDiscoveryTask() {
+	public DeploymentDiscoveryTask() {
 		this.client = new KubernetesClientBuilder().build();
 
 		new Thread(() -> {
 			RedisManager.get().subscribe(new JedisPubSub() {
 				@Override
 				public void onMessage(String channel, String message) {
-					discoverGames();
+					discoverDeployments();
 				}
 			}, RedisChannel.DEPLOYMENT_MODIFIED.getRef());
 		}).start();
@@ -31,17 +32,17 @@ public class GameDiscoveryTask {
 		new Thread(() -> {
 			//Sleep to ensure that ServerDiscoveryTask has had time to register all instances
 			try { Thread.sleep(5000); } catch(InterruptedException e) { throw new RuntimeException(e); }
-			discoverGames();
+			discoverDeployments();
 		}).start();
 	}
 
-	public void discoverGames() {
-		GameManager gameManager = BMCManager.gameManager;
+	public void discoverDeployments() {
+		DeploymentManager deploymentManager = BMCManager.deploymentManager;
 
-		List<Game> existingGames = gameManager.getGames();
-		List<Game> newGames = new ArrayList<>();
+		List<DeploymentWrapper<?>> existingDeployments = deploymentManager.getDeployments();
+		List<DeploymentWrapper<?>> newDeployments = new ArrayList<>();
 
-		List<Deployment> gameDeployments = client.apps().deployments()
+		List<Deployment> deployments = client.apps().deployments()
 				.inNamespace("default")
 				.list()
 				.getItems()
@@ -55,17 +56,22 @@ public class GameDiscoveryTask {
 										.get(DeploymentLabel.SERVER_DISCOVERY.getLabel())))
 				.toList();
 
-		gameDeployments.forEach(deployment -> {
-			Game game = new Game(deployment);
-			if(existingGames.contains(game)) {
-				existingGames.remove(game);
+		deployments.forEach(deployment -> {
+			String typeLabel = deployment.getSpec().getTemplate().getMetadata().getLabels().get(DeploymentLabel.DEPLOYMENT_TYPE.getLabel());
+			DeploymentType type = DeploymentType.getType(typeLabel);
+
+			if(type == null) return;
+			DeploymentWrapper<?> deploymentWrapper = deploymentManager.createWrapper(deployment, type);
+
+			if(existingDeployments.contains(deploymentWrapper)) {
+				existingDeployments.remove(deploymentWrapper);
 			} else {
-				newGames.add(game);
+				newDeployments.add(deploymentWrapper);
 			}
 		});
 
-		for(Game existingGame : existingGames) gameManager.unregisterGame(existingGame);
-		for(Game newGame : newGames) gameManager.registerGame(newGame);
-		for(Game game : gameManager.getGames()) game.fetchInstances();
+		for(DeploymentWrapper<?> existingDeployment : existingDeployments) deploymentManager.unregisterDeployment(existingDeployment);
+		for(DeploymentWrapper<?> newDeployment : newDeployments) deploymentManager.registerDeployment(newDeployment);
+		for(DeploymentWrapper<?> deployment : deploymentManager.getDeployments()) deployment.fetchInstances();
 	}
 }
