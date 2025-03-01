@@ -33,6 +33,14 @@ public class DeploymentManager {
 		deployments.remove(deployment);
 	}
 
+	public void updateDeployment(DeploymentWrapper<?> deployment) {
+		DeploymentWrapper<?> wrapper = getDeployment(deployment.getName());
+		if (wrapper == null) return;
+		deployments.removeIf(deploymentWrapper -> deploymentWrapper.getName().equals(deployment.getName()));
+
+		deployments.add(deployment);
+	}
+
 	public List<DeploymentWrapper<?>> getDeployments() {
 		return new ArrayList<>(deployments);
 	}
@@ -45,12 +53,25 @@ public class DeploymentManager {
 
 	public List<Game> getGames() {
 		List<Game> games = new ArrayList<>();
-		for(DeploymentWrapper<?> deployment : deployments) if (deployment instanceof Game) games.add((Game) deployment);
+		for(DeploymentWrapper<?> deployment : deployments) {
+			if (deployment instanceof Game) {
+				games.add((Game) deployment);
+			}
+		}
 		return games;
 	}
 
 	public Game getGame(String name) {
 		for(Game game : getGames()) if (game.getName().equals(name)) return game;
+		return null;
+	}
+
+	public Proxy getProxy() {
+		for(DeploymentWrapper<?> deployment : deployments) {
+			if (deployment instanceof Proxy) {
+				return (Proxy) deployment;
+			}
+		}
 		return null;
 	}
 

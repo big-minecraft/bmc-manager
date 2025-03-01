@@ -65,6 +65,7 @@ public class DeploymentDiscoveryTask {
 
 			if(existingDeployments.contains(deploymentWrapper)) {
 				existingDeployments.remove(deploymentWrapper);
+				deploymentManager.updateDeployment(deploymentWrapper);
 			} else {
 				newDeployments.add(deploymentWrapper);
 			}

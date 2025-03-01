@@ -38,13 +38,10 @@ public class InstanceDiscoveryTask {
 		List<Pod> proxyList = client.pods().withLabel("app", "proxy").list().getItems();
 
 		podList.addAll(proxyList);
-		System.out.println("Pod list size: " + podList.size());
 
 		podList.forEach(pod -> {
 			if (pod.getStatus().getPodIP() == null) return;
 			if (pod.getStatus().getPhase().equals("Terminating")) return;
-
-			System.out.println("New pod detected: " + pod.getMetadata().getName());
 
 			if (diff(pod)) {
 				Instance instance = InstanceFactory.createFromPod(pod);
