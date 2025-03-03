@@ -1,9 +1,10 @@
 package dev.kyriji.bmcmanager.enums;
 
 public enum DeploymentType {
+	PROXY,
 	SCALABLE,
 	PERSISTENT,
-	PROXY,
+	PROCESS
 	;
 
 	public static DeploymentType getType(String type) {

@@ -20,6 +20,7 @@ public class InstanceFactory {
 
 		return switch(type) {
 			case SCALABLE, PERSISTENT, PROXY -> new MinecraftInstance(uid, name, podName, ip, deployment);
+			case PROCESS -> new Instance(uid, name, podName, ip, deployment);
 		};
 	}
 

@@ -3,6 +3,7 @@ package dev.kyriji.bmcmanager.controllers;
 import dev.kyriji.bmcmanager.enums.DeploymentType;
 import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
 import dev.kyriji.bmcmanager.objects.Game;
+import dev.kyriji.bmcmanager.objects.Process;
 import dev.kyriji.bmcmanager.objects.Proxy;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 
@@ -50,7 +51,6 @@ public class DeploymentManager {
 		return null;
 	}
 
-
 	public List<Game> getGames() {
 		List<Game> games = new ArrayList<>();
 		for(DeploymentWrapper<?> deployment : deployments) {
@@ -79,6 +79,7 @@ public class DeploymentManager {
 		return switch(type) {
 			case SCALABLE, PERSISTENT -> new Game(deployment);
 			case PROXY -> new Proxy(deployment);
+			case PROCESS -> new Process(deployment);
 		};
 	}
 }
