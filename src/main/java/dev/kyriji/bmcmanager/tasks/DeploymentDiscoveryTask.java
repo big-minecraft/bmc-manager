@@ -6,7 +6,7 @@ import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.enums.DeploymentType;
 import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
-import dev.wiji.bigminecraftapi.enums.RedisChannel;
+import dev.kyriji.bigminecraftapi.enums.RedisChannel;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;

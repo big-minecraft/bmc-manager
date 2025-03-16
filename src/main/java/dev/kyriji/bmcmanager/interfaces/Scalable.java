@@ -1,7 +1,7 @@
 package dev.kyriji.bmcmanager.interfaces;
 
 import dev.kyriji.bmcmanager.objects.ScalingSettings;
-import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
+import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 
 import java.util.List;
 

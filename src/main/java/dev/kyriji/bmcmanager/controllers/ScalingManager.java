@@ -1,13 +1,13 @@
 package dev.kyriji.bmcmanager.controllers;
 
 import com.google.gson.Gson;
+import dev.kyriji.bigminecraftapi.enums.InstanceState;
+import dev.kyriji.bigminecraftapi.objects.Instance;
+import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.enums.ScaleStrategy;
 import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
 import dev.kyriji.bmcmanager.objects.ScalingSettings;
-import dev.wiji.bigminecraftapi.enums.InstanceState;
-import dev.wiji.bigminecraftapi.objects.Instance;
-import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;

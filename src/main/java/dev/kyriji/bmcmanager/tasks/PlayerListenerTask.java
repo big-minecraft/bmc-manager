@@ -1,14 +1,13 @@
 package dev.kyriji.bmcmanager.tasks;
 
 import com.google.gson.Gson;
+import dev.kyriji.bigminecraftapi.enums.RedisChannel;
+import dev.kyriji.bigminecraftapi.objects.Instance;
+import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.DeploymentManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
-import dev.kyriji.bmcmanager.objects.Proxy;
-import dev.wiji.bigminecraftapi.enums.RedisChannel;
-import dev.wiji.bigminecraftapi.objects.Instance;
-import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
 import redis.clients.jedis.JedisPubSub;
 
 import java.util.ArrayList;

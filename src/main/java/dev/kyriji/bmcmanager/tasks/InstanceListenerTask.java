@@ -7,10 +7,10 @@ import dev.kyriji.bmcmanager.controllers.QueueManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
 import dev.kyriji.bmcmanager.objects.Game;
-import dev.wiji.bigminecraftapi.enums.InstanceState;
-import dev.wiji.bigminecraftapi.enums.RedisChannel;
-import dev.wiji.bigminecraftapi.objects.Instance;
-import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
+import dev.kyriji.bigminecraftapi.enums.InstanceState;
+import dev.kyriji.bigminecraftapi.enums.RedisChannel;
+import dev.kyriji.bigminecraftapi.objects.Instance;
+import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import redis.clients.jedis.JedisPubSub;
 
 import java.util.List;

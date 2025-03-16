@@ -5,7 +5,7 @@ import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.factories.InstanceFactory;
 import dev.kyriji.bmcmanager.controllers.InstanceManager;
 import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
-import dev.wiji.bigminecraftapi.objects.Instance;
+import dev.kyriji.bigminecraftapi.objects.Instance;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;

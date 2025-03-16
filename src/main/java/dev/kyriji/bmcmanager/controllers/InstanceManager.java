@@ -1,10 +1,10 @@
 package dev.kyriji.bmcmanager.controllers;
 
 import com.google.gson.Gson;
+import dev.kyriji.bigminecraftapi.enums.RedisChannel;
+import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bmcmanager.BMCManager;
-import dev.wiji.bigminecraftapi.enums.RedisChannel;
-import dev.wiji.bigminecraftapi.objects.Instance;
-import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
+
 
 import java.util.ArrayList;
 import java.util.List;

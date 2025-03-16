@@ -1,7 +1,7 @@
 package dev.kyriji.bmcmanager.objects;
 
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
-import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
+import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 
 public class Game extends DeploymentWrapper<MinecraftInstance> {

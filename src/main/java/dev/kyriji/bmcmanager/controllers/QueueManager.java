@@ -2,9 +2,9 @@ package dev.kyriji.bmcmanager.controllers;
 
 import dev.kyriji.bmcmanager.enums.QueueStrategy;
 import dev.kyriji.bmcmanager.objects.Game;
-import dev.wiji.bigminecraftapi.enums.InstanceState;
-import dev.wiji.bigminecraftapi.enums.RedisChannel;
-import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
+import dev.kyriji.bigminecraftapi.enums.InstanceState;
+import dev.kyriji.bigminecraftapi.enums.RedisChannel;
+import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 
 import java.util.List;
 import java.util.UUID;

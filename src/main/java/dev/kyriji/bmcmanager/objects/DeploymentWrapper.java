@@ -1,14 +1,15 @@
 package dev.kyriji.bmcmanager.objects;
 
 import com.google.gson.Gson;
+import dev.kyriji.bigminecraftapi.objects.Instance;
+import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.enums.QueueStrategy;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.interfaces.Scalable;
-import dev.wiji.bigminecraftapi.objects.Instance;
-import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
+
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 
 import java.lang.reflect.ParameterizedType;
@@ -76,7 +77,7 @@ public abstract class DeploymentWrapper<T extends Instance> implements Scalable 
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
+		if (o == null || getClass().getGenericSuperclass() != o.getClass().getGenericSuperclass()) return false;
 		Game game = (Game) o;
 		return Objects.equals(getName(), game.getName());
 	}

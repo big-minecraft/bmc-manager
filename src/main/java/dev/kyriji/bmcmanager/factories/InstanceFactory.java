@@ -2,8 +2,8 @@ package dev.kyriji.bmcmanager.factories;
 
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.enums.DeploymentType;
-import dev.wiji.bigminecraftapi.objects.Instance;
-import dev.wiji.bigminecraftapi.objects.MinecraftInstance;
+import dev.kyriji.bigminecraftapi.objects.Instance;
+import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import io.fabric8.kubernetes.api.model.Pod;
 
 public class InstanceFactory {
