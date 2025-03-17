@@ -78,8 +78,8 @@ public abstract class DeploymentWrapper<T extends Instance> implements Scalable 
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass().getGenericSuperclass() != o.getClass().getGenericSuperclass()) return false;
-		Game game = (Game) o;
-		return Objects.equals(getName(), game.getName());
+		DeploymentWrapper<?> wrapper = (DeploymentWrapper<?>) o;
+		return Objects.equals(getName(), wrapper.getName());
 	}
 
 	@Override
