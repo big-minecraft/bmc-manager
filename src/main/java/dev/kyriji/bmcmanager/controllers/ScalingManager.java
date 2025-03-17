@@ -139,7 +139,7 @@ public class ScalingManager {
 			pod.delete();
 
 			instance.setState(InstanceState.STOPPING);
-			RedisManager.get().hset(instance.getDeployment(), instance.getUid(), gson.toJson(instance));
+			RedisManager.get().updateInstance(instance);
 		}
 	}
 

@@ -15,6 +15,7 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -60,10 +61,8 @@ public abstract class DeploymentWrapper<T extends Instance> implements Scalable 
 	public void fetchInstances() {
 		this.instances.clear();
 
-		RedisManager.get().hgetAll(name).forEach((uid, json) -> {
-			T instance = gson.fromJson(json, getInstanceType());
-			this.instances.add(instance);
-		});
+		List<Instance> instances = RedisManager.get().scanAndDeserializeInstances("*:" + name, getInstanceType());
+		this.instances.addAll((Collection<? extends T>) instances);
 	}
 
 	public String getName() {

@@ -23,12 +23,13 @@ public class InstanceManager {
 
 	public void registerInstance(Instance instance) {
 		System.out.println("Registering instance: " + instance.getUid());
-		RedisManager.get().hset(instance.getDeployment(), instance.getUid(), gson.toJson(instance));
+		RedisManager.get().updateInstance(instance);
 		RedisManager.get().publish(RedisChannel.INSTANCE_MODIFIED.getRef(), gson.toJson(instance));
 	}
 
 	public void unregisterInstance(String deploymentName, String uid) {
-		RedisManager.get().hdel(deploymentName, uid);
+		String key = "instance:" + uid + ":" + deploymentName;
+		RedisManager.get().hdelAll(key);
 		RedisManager.get().publish(RedisChannel.INSTANCE_MODIFIED.getRef(), "");
 	}
 

@@ -43,7 +43,7 @@ public class InstanceListenerTask {
 						BMCManager.scalingManager.turnOffPod(minecraftInstance);
 				}
 
-				RedisManager.get().hset(deployment.getName(), instance.getUid(), gson.toJson(instance));
+				RedisManager.get().updateInstance(instance);
 				deployment.fetchInstances();
 			}
 		}, RedisChannel.INSTANCE_STATE_CHANGE.getRef())).start();

@@ -33,9 +33,7 @@ public class PlayerListenerTask {
 				if(!(proxyInstance instanceof MinecraftInstance minecraftInstance)) return;
 
 				minecraftInstance.addPlayer(playerId, username);
-				RedisManager.get().hset(minecraftInstance.getDeployment(),
-						minecraftInstance.getUid(),
-						gson.toJson(minecraftInstance));
+				RedisManager.get().updateInstance(minecraftInstance);
 
 				updateDeployment(minecraftInstance);
 			}
@@ -56,9 +54,7 @@ public class PlayerListenerTask {
 				if(!(proxyInstance instanceof MinecraftInstance minecraftInstance)) return;
 
 				minecraftInstance.removePlayer(playerId);
-				RedisManager.get().hset(minecraftInstance.getDeployment(),
-						minecraftInstance.getUid(),
-						gson.toJson(minecraftInstance));
+				RedisManager.get().updateInstance(minecraftInstance);
 
 				removePlayerFromInstance(playerId, true);
 				updateDeployment(minecraftInstance);
@@ -82,7 +78,7 @@ public class PlayerListenerTask {
 				if(!(instance instanceof MinecraftInstance server)) return;
 
 				server.addPlayer(playerId, name);
-				RedisManager.get().hset(server.getDeployment(), server.getUid(), gson.toJson(server));
+				RedisManager.get().updateInstance(server);
 				updateDeployment(server);
 			}
 		}, RedisChannel.INSTANCE_SWITCH.getRef())).start();
@@ -100,7 +96,7 @@ public class PlayerListenerTask {
 
 			if(minecraftInstance.hasPlayer(player)) {
 				minecraftInstance.removePlayer(player);
-				RedisManager.get().hset(instance.getDeployment(), instance.getUid(), gson.toJson(instance));
+				RedisManager.get().updateInstance(minecraftInstance);
 			}
 		}
 	}
