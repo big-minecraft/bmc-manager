@@ -96,6 +96,10 @@ public class RedisManager {
 		hset(key, "podName", instance.getPodName());
 		hset(key, "ip", instance.getIp());
 		hset(key, "state", instance.getState().name());
+
+		if(instance instanceof MinecraftInstance minecraftInstance) {
+			hset(key, "players", new Gson().toJson(minecraftInstance.getPlayers()));
+		}
 	}
 
 	public List<Instance> scanAndDeserializeInstances(String pattern, Type typeClass) {
