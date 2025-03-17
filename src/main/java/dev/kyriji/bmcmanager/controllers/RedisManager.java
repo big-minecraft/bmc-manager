@@ -106,7 +106,7 @@ public class RedisManager {
 		try(Jedis jedis = jedisPool.getResource()) {
 			String cursor = "0";
 			do {
-				ScanResult<String> scanResult = jedis.scan(cursor, new ScanParams().match(pattern).count(100));
+				ScanResult<String> scanResult = jedis.scan(cursor, new ScanParams().match(pattern));
 				cursor = scanResult.getCursor();
 
 				for(String key : scanResult.getResult()) {
