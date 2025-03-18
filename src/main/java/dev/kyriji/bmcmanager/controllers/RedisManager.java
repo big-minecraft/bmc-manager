@@ -102,7 +102,7 @@ public class RedisManager {
 		}
 	}
 
-	public List<Instance> scanAndDeserializeInstances(String pattern, Type typeClass) {
+	public List<Instance> scanAndDeserializeInstances(String pattern) {
 		Gson gson = new Gson();
 		List<Instance> resultList = new ArrayList<>();
 		Type playerMapType = new TypeToken<Map<UUID, String>>(){}.getType();
@@ -126,7 +126,7 @@ public class RedisManager {
 					InstanceState state = stateStr != null ? InstanceState.valueOf(stateStr) : null;
 
 					Instance instance;
-					if(typeClass instanceof MinecraftInstance) {
+					if(hashData.containsKey("players")) {
 						String playersStr = hashData.get("players");
 						Map<UUID, String> players = playersStr != null ?
 								gson.fromJson(playersStr, playerMapType) : new HashMap<>();
@@ -144,5 +144,9 @@ public class RedisManager {
 		}
 
 		return resultList;
+	}
+
+	public void updateTimestamp() {
+		withRedis(jedis -> jedis.set("lastManagerUpdate", String.valueOf(System.currentTimeMillis())));
 	}
 }

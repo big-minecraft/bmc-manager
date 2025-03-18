@@ -1,6 +1,7 @@
 package dev.kyriji.bmcmanager.tasks;
 
 import dev.kyriji.bmcmanager.BMCManager;
+import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.factories.InstanceFactory;
 import dev.kyriji.bmcmanager.controllers.InstanceManager;
@@ -61,6 +62,7 @@ public class InstanceDiscoveryTask {
 		});
 
 		BMCManager.deploymentManager.getDeployments().forEach(DeploymentWrapper::fetchInstances);
+		RedisManager.get().updateTimestamp();
 	}
 
 	private boolean diff(Pod pod) {
