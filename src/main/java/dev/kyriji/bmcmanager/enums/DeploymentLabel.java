@@ -17,6 +17,7 @@ public enum DeploymentLabel {
 	SCALE_DOWN_COOLDOWN(getPrefix() + "scale-down-cooldown"),
 	SCALE_UP_LIMIT(getPrefix() + "scale-up-limit"),
 	SCALE_DOWN_LIMIT(getPrefix() + "scale-down-limit"),
+	REQUIRE_STARTUP_CONFIRMATION(getPrefix() + "require-startup-confirmation"),
 	;
 
 	private final String label;

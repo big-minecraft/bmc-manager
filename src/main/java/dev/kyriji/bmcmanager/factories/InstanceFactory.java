@@ -1,5 +1,6 @@
 package dev.kyriji.bmcmanager.factories;
 
+import dev.kyriji.bigminecraftapi.enums.InstanceState;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.enums.DeploymentType;
 import dev.kyriji.bigminecraftapi.objects.Instance;
@@ -18,10 +19,20 @@ public class InstanceFactory {
 		String ip = pod.getStatus().getPodIP();
 		String deployment = pod.getMetadata().getLabels().get("app");
 
-		return switch(type) {
+		Instance instance;
+		instance = switch(type) {
 			case SCALABLE, PERSISTENT, PROXY -> new MinecraftInstance(uid, name, podName, ip, deployment);
 			case PROCESS -> new Instance(uid, name, podName, ip, deployment);
 		};
+
+		System.out.println(name);
+
+		if(pod.getMetadata().getLabels().containsKey(DeploymentLabel.REQUIRE_STARTUP_CONFIRMATION.getLabel())) {
+			boolean requiresStartupConfirmation = Boolean.parseBoolean(pod.getMetadata().getLabels().get(DeploymentLabel.REQUIRE_STARTUP_CONFIRMATION.getLabel()));
+			instance.setState(requiresStartupConfirmation ? InstanceState.STARTING: InstanceState.RUNNING);
+		}
+
+		return instance;
 	}
 
 	private static String generateName(Pod pod) {

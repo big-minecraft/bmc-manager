@@ -76,8 +76,7 @@ public abstract class DeploymentWrapper<T extends Instance> implements Scalable 
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
-		if (o == null || getClass().getGenericSuperclass() != o.getClass().getGenericSuperclass()) return false;
-		DeploymentWrapper<?> wrapper = (DeploymentWrapper<?>) o;
+		if (!(o instanceof DeploymentWrapper<?> wrapper)) return false;
 		return Objects.equals(getName(), wrapper.getName());
 	}
 
