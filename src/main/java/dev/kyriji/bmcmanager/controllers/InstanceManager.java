@@ -28,6 +28,7 @@ public class InstanceManager {
 	}
 
 	public void unregisterInstance(String deploymentName, String uid) {
+		System.out.println("Unregistering instance: " + uid);
 		String key = "instance:" + uid + ":" + deploymentName;
 		RedisManager.get().hdelAll(key);
 		RedisManager.get().publish(RedisChannel.INSTANCE_MODIFIED.getRef(), "");

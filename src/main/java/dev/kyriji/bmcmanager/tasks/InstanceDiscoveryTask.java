@@ -47,7 +47,6 @@ public class InstanceDiscoveryTask {
 			if (diff(pod)) {
 				Instance instance = InstanceFactory.createFromPod(pod);
 				if (instance == null) return;
-				System.out.println("Instance created: " + instance.getName());
 
 				instanceManager.registerInstance(instance);
 			}
