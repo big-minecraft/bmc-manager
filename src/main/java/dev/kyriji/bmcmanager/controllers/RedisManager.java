@@ -1,14 +1,10 @@
 package dev.kyriji.bmcmanager.controllers;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import dev.kyriji.bigminecraftapi.enums.InstanceState;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
-import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -20,7 +16,6 @@ import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class RedisManager {
 	private static RedisManager instance;
@@ -86,7 +81,12 @@ public class RedisManager {
 	}
 
 	public void clear() {
-		withRedis(Jedis::flushAll);
+		withRedis(jedis -> {
+			Set<String> keys = jedis.keys("instance:*");
+			if (keys != null && !keys.isEmpty()) {
+				jedis.del(keys.toArray(new String[0]));
+			}
+		});
 	}
 
 	public void updateInstance(Instance instance) {

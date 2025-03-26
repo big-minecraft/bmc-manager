@@ -84,5 +84,22 @@ public class InstanceListenerTask {
 				QueueManager.queuePlayer(playerId, game);
 			}
 		}, RedisChannel.QUEUE_PLAYER.getRef())).start();
+
+		new Thread(() -> RedisManager.get().subscribe(new JedisPubSub() {
+			@Override
+			public void onMessage(String channel, String message) {
+				String[] parts = message.split(":");
+				UUID playerId = UUID.fromString(parts[0]);
+				String ip = parts[1];
+
+				Instance instance = BMCManager.instanceManager.getFromIP(ip);
+				if(!(instance instanceof MinecraftInstance)) {
+					QueueManager.sendPlayerToInstance(playerId, null);
+					return;
+				}
+
+				QueueManager.sendPlayerToInstance(playerId, (MinecraftInstance) instance);
+			}
+		}, RedisChannel.TRANSFER_PLAYER.getRef())).start();
 	}
 }
