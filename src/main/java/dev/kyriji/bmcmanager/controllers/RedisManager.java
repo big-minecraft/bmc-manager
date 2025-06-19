@@ -120,7 +120,7 @@ public class RedisManager {
 					String name = hashData.get("name");
 					String podName = hashData.get("podName");
 					String ip = hashData.get("ip");
-					String deployment = hashData.get("deployment");
+					String deployment = pattern.split(":")[1];
 					String stateStr = hashData.get("state");
 
 					InstanceState state = stateStr != null ? InstanceState.valueOf(stateStr) : null;
