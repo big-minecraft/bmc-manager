@@ -96,6 +96,7 @@ public class RedisManager {
 		hset(key, "podName", instance.getPodName());
 		hset(key, "ip", instance.getIp());
 		hset(key, "state", instance.getState().name());
+		hset(key, "deployment", instance.getDeployment());
 
 		if(instance instanceof MinecraftInstance minecraftInstance) {
 			hset(key, "players", new Gson().toJson(minecraftInstance.getPlayers()));
@@ -120,7 +121,7 @@ public class RedisManager {
 					String name = hashData.get("name");
 					String podName = hashData.get("podName");
 					String ip = hashData.get("ip");
-					String deployment = pattern.split(":")[1];
+					String deployment = hashData.get("deployment");
 					String stateStr = hashData.get("state");
 
 					InstanceState state = stateStr != null ? InstanceState.valueOf(stateStr) : null;
