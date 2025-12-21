@@ -7,6 +7,9 @@ WORKDIR /app
 COPY build.gradle settings.gradle gradlew ./
 COPY gradle ./gradle
 
+# Copy local dependencies
+COPY libs ./libs
+
 # Copy source code
 COPY src ./src
 
