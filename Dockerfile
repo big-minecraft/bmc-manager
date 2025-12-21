@@ -1,5 +1,5 @@
 # Build stage
-FROM gradle:8.5-jdk17 AS build
+FROM gradle:8.5-jdk21 AS build
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ COPY src ./src
 RUN ./gradlew shadowJar --no-daemon
 
 # Runtime stage
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
