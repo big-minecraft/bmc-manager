@@ -7,7 +7,7 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 
 public class Proxy extends DeploymentWrapper<MinecraftInstance> implements Scalable {
 
-	public Proxy(Deployment deployment) {
+	public Proxy(BMCDeployment deployment) {
 		super(deployment);
 	}
 }

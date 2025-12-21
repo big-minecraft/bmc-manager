@@ -18,7 +18,6 @@ public class InstanceManager {
 
 	private void clearExistingData() {
 		RedisManager.get().clear();
-		RedisManager.get().publish(RedisChannel.INSTANCE_MODIFIED.getRef(), "");
 	}
 
 	public void registerInstance(Instance instance) {

@@ -7,7 +7,7 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 public class Game extends DeploymentWrapper<MinecraftInstance> {
 	private final boolean isInitial;
 
-	public Game(Deployment deployment) {
+	public Game(BMCDeployment deployment) {
 		super(deployment);
 
 		this.isInitial = Boolean.parseBoolean(deployment.getSpec().getTemplate().getMetadata().getLabels()

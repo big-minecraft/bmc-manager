@@ -5,9 +5,11 @@ import dev.kyriji.bmcmanager.controllers.DeploymentManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.enums.DeploymentType;
+import dev.kyriji.bmcmanager.objects.BMCDeployment;
 import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
 import dev.kyriji.bigminecraftapi.enums.RedisChannel;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import redis.clients.jedis.JedisPubSub;
@@ -56,7 +58,25 @@ public class DeploymentDiscoveryTask {
 										.get(DeploymentLabel.SERVER_DISCOVERY.getLabel())))
 				.toList();
 
-		deployments.forEach(deployment -> {
+		List<StatefulSet> statefulSets = client.apps().statefulSets()
+				.inNamespace("default")
+				.list()
+				.getItems()
+				.stream()
+				.filter(statefulSet ->
+						statefulSet.getSpec() != null &&
+								statefulSet.getSpec().getTemplate() != null &&
+								statefulSet.getSpec().getTemplate().getMetadata() != null &&
+								statefulSet.getSpec().getTemplate().getMetadata().getLabels() != null &&
+								"true".equals(statefulSet.getSpec().getTemplate().getMetadata().getLabels()
+										.get(DeploymentLabel.SERVER_DISCOVERY.getLabel())))
+				.toList();
+
+		List<BMCDeployment> bmcDeployments = new ArrayList<>();
+		deployments.forEach(deployment -> bmcDeployments.add(new BMCDeployment(deployment)));
+		statefulSets.forEach(statefulSet -> bmcDeployments.add(new BMCDeployment(statefulSet)));
+
+		bmcDeployments.forEach(deployment -> {
 			String typeLabel = deployment.getSpec().getTemplate().getMetadata().getLabels().get(DeploymentLabel.DEPLOYMENT_TYPE.getLabel());
 			DeploymentType type = DeploymentType.getType(typeLabel);
 

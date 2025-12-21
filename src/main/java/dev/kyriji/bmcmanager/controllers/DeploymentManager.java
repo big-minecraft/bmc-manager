@@ -1,11 +1,13 @@
 package dev.kyriji.bmcmanager.controllers;
 
 import dev.kyriji.bmcmanager.enums.DeploymentType;
+import dev.kyriji.bmcmanager.objects.BMCDeployment;
 import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
 import dev.kyriji.bmcmanager.objects.Game;
 import dev.kyriji.bmcmanager.objects.Process;
 import dev.kyriji.bmcmanager.objects.Proxy;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,7 +77,7 @@ public class DeploymentManager {
 		return null;
 	}
 
-	public DeploymentWrapper<?> createWrapper(Deployment deployment, DeploymentType type) {
+	public DeploymentWrapper<?> createWrapper(BMCDeployment deployment, DeploymentType type) {
 		return switch(type) {
 			case SCALABLE, PERSISTENT -> new Game(deployment);
 			case PROXY -> new Proxy(deployment);

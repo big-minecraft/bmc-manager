@@ -21,7 +21,7 @@ import java.util.Objects;
 
 public abstract class DeploymentWrapper<T extends Instance> implements Scalable {
 
-	protected Deployment deployment;
+	protected BMCDeployment deployment;
 	protected List<T> instances;
 	private final String name;
 
@@ -33,7 +33,7 @@ public abstract class DeploymentWrapper<T extends Instance> implements Scalable 
 
 	private final Gson gson;
 
-	public DeploymentWrapper(Deployment deployment) {
+	public DeploymentWrapper(BMCDeployment deployment) {
 		this.deployment = deployment;
 		this.instances = new ArrayList<>();
 
