@@ -61,7 +61,7 @@ public abstract class DeploymentWrapper<T extends Instance> implements Scalable 
 	public void fetchInstances() {
 		this.instances.clear();
 
-		List<Instance> instances = RedisManager.get().scanAndDeserializeInstances("*:" + name);
+		List<Instance> instances = RedisManager.get().scanAndDeserializeInstances("instance:*:" + name);
 		this.instances.addAll((Collection<? extends T>) instances);
 	}
 

@@ -115,6 +115,12 @@ public class RedisManager {
 				cursor = scanResult.getCursor();
 
 				for(String key : scanResult.getResult()) {
+					String type = jedis.type(key);
+					if (!"hash".equals(type)) {
+						System.err.println("Skipping key '" + key + "' - expected hash but found: " + type);
+						continue;
+					}
+
 					Map<String, String> hashData = jedis.hgetAll(key);
 
 					String uid = hashData.get("uid");
