@@ -35,17 +35,20 @@ public class ReconciliationQueue {
 	}
 
 	public void requeue(ReconcileRequest request, long delayMs) {
+		// Note: request stays in inFlight during delay to prevent duplicate enqueues
 		scheduler.schedule(() -> {
 			synchronized (this) {
-				// Remove from in-flight first
+				// Remove old request from in-flight
 				inFlight.remove(request);
-				// Create new request with same details (for fresh timestamp)
+				// Create new request with fresh timestamp
 				ReconcileRequest newRequest = new ReconcileRequest(
 					request.getNamespace(),
 					request.getName(),
 					request.getResourceType()
 				);
-				enqueue(newRequest);
+				// Add new request to in-flight and queue
+				inFlight.add(newRequest);
+				queue.offer(newRequest);
 			}
 		}, delayMs, TimeUnit.MILLISECONDS);
 	}

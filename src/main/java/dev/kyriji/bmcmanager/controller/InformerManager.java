@@ -155,11 +155,11 @@ public class InformerManager {
 					// Process the reconciliation request
 					ReconcileResult result = reconciler.reconcile(request);
 
-					// Mark as complete (removes from in-flight set)
-					queue.markComplete(request);
-
-					// Requeue if needed
-					if (result.shouldRequeue()) {
+					// Only mark complete if NOT requeueing
+					// This prevents duplicate enqueues during the requeue delay window
+					if (!result.shouldRequeue()) {
+						queue.markComplete(request);
+					} else {
 						queue.requeue(request, result.getRequeueAfterMs());
 					}
 
