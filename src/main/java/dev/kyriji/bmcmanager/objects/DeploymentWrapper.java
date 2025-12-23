@@ -51,13 +51,6 @@ public abstract class DeploymentWrapper<T extends Instance> implements Scalable 
 		return ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
 	}
 
-	public void scale() {
-		if(!(getInstanceType() instanceof MinecraftInstance)) return;
-
-		ScaleResult result = BMCManager.scalingManager.checkToScale((DeploymentWrapper<MinecraftInstance>) this);
-		BMCManager.scalingManager.scale((DeploymentWrapper<MinecraftInstance>) this, result);
-	}
-
 	public void fetchInstances() {
 		this.instances.clear();
 

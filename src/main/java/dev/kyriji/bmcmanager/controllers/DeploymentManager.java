@@ -18,12 +18,18 @@ public class DeploymentManager {
 	public DeploymentManager() {
 		this.deployments = new ArrayList<>();
 
+		// OLD POLLING LOOP - DISABLED
+		// Scaling is now handled by the event-driven InformerManager and DeploymentReconciler
+		// This polling loop has been replaced to avoid the race condition where pods were
+		// deleted before the deployment replica count was updated.
+		/*
 		new Thread(() -> {
 			while (true) {
 				for(DeploymentWrapper<?> deployment : deployments) deployment.scale();
 				try { Thread.sleep(1000); } catch (InterruptedException e) { e.printStackTrace(); }
 			}
 		}).start();
+		*/
 	}
 
 	public void registerDeployment(DeploymentWrapper<?> deployment) {

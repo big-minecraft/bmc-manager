@@ -38,9 +38,11 @@ public class InstanceListenerTask {
 				InstanceState state = InstanceState.valueOf(stateString);
 				instance.setState(state);
 
+				// Delete pod when instance is stopping or stopped
 				if(state == InstanceState.STOPPING || state == InstanceState.STOPPED) {
-					if(deployment.getInstanceType() instanceof MinecraftInstance minecraftInstance)
-						BMCManager.scalingManager.turnOffPod(minecraftInstance);
+					if(instance instanceof MinecraftInstance minecraftInstance) {
+						turnOffPod(minecraftInstance);
+					}
 				}
 
 				RedisManager.get().updateInstance(instance);
@@ -101,5 +103,17 @@ public class InstanceListenerTask {
 				QueueManager.sendPlayerToInstance(playerId, (MinecraftInstance) instance);
 			}
 		}, RedisChannel.TRANSFER_PLAYER.getRef())).start();
+	}
+
+	private void turnOffPod(MinecraftInstance instance) {
+		try {
+			BMCManager.kubernetesClient.pods()
+				.inNamespace("default")
+				.withName(instance.getPodName())
+				.delete();
+			System.out.println("Deleted pod: " + instance.getPodName());
+		} catch (Exception e) {
+			System.err.println("Failed to delete pod " + instance.getPodName() + ": " + e.getMessage());
+		}
 	}
 }
