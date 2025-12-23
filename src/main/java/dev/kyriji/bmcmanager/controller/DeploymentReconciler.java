@@ -11,6 +11,7 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
+import java.lang.reflect.Type;
 import java.util.Map;
 
 public class DeploymentReconciler {
@@ -81,9 +82,17 @@ public class DeploymentReconciler {
 			}
 
 			// 5. Only handle MinecraftInstance deployments for now
-			if (!(wrapper.getInstanceType() instanceof MinecraftInstance)) {
+			Type instanceType = wrapper.getInstanceType();
+			if (DEBUG_SCALING) {
+				System.out.println("Deployment instance type: " + instanceType);
+			}
+
+			// Check if the type is MinecraftInstance.class
+			if (!MinecraftInstance.class.equals(instanceType)) {
 				if (DEBUG_SCALING) {
 					System.out.println("Not a MinecraftInstance deployment - SKIPPING");
+					System.out.println("  Expected: " + MinecraftInstance.class);
+					System.out.println("  Got: " + instanceType);
 					System.out.println("########## RECONCILIATION END ##########\n");
 				}
 				return ReconcileResult.noRequeue();
