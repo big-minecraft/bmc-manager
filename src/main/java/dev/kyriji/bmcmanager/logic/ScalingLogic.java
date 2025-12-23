@@ -121,6 +121,8 @@ public class ScalingLogic {
 
 	private List<MinecraftInstance> selectPodsForScaleDown(List<MinecraftInstance> instances, int count) {
 		if(instances.size() <= count) return new ArrayList<>();
+		System.out.println("----------------------------");
+		System.out.println("Selecting pods for scale down:");
 
 		// Sort by player count (ascending) - instances with fewest players first
 		List<MinecraftInstance> sortedInstances = new ArrayList<>(instances);
@@ -131,8 +133,14 @@ public class ScalingLogic {
 			.filter(instance -> instance.getState() == InstanceState.RUNNING)
 			.toList();
 
+		candidates.forEach(instance ->
+			System.out.println("Instance: " + instance.getName() + ", Players: " + instance.getPlayers().size())
+		);
+
 		// Take the first N candidates (those with fewest players)
 		int toRemove = Math.min(count, candidates.size());
+		System.out.println("Selected " + toRemove + " instances for removal.");
+		System.out.println("---------------------------");
 		return new ArrayList<>(candidates.subList(0, toRemove));
 	}
 
