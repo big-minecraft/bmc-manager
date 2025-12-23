@@ -146,9 +146,9 @@ public class ScalingLogic {
 				System.out.println("--- End Threshold Check ---");
 			}
 			return ScaleResult.UP;
-		} else if(playersPerInstance <= settings.scaleDownThreshold) {
+		} else if(playersPerInstance < settings.scaleDownThreshold) {
 			if (DEBUG_SCALING) {
-				System.out.println("Decision: SCALE DOWN (" + String.format("%.2f", playersPerInstance) + " <= " + settings.scaleDownThreshold + ")");
+				System.out.println("Decision: SCALE DOWN (" + String.format("%.2f", playersPerInstance) + " < " + settings.scaleDownThreshold + ")");
 				System.out.println("--- End Threshold Check ---");
 			}
 			return ScaleResult.DOWN;
@@ -216,7 +216,7 @@ public class ScalingLogic {
 				System.out.println("  Scale-down limit: " + scaleDownLimit);
 			}
 
-			while(playersPerInstance <= targetRatio && -instancesToAdd < scaleDownLimit && activeCurrentInstances > 1) {
+			while(playersPerInstance < targetRatio && -instancesToAdd < scaleDownLimit && activeCurrentInstances > 1) {
 				activeCurrentInstances--;
 				instancesToAdd--;
 				playersPerInstance = (double) playerCount / activeCurrentInstances;
