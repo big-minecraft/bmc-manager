@@ -133,14 +133,29 @@ public class InformerManager {
 	}
 
 	private boolean shouldReconcile(HasMetadata resource) {
+		// Check deployment/statefulset metadata labels first
 		Map<String, String> labels = resource.getMetadata().getLabels();
-		if (labels == null) {
-			return false;
+		if (labels != null) {
+			String serverDiscovery = labels.get(DeploymentLabel.SERVER_DISCOVERY.getLabel());
+			if ("true".equals(serverDiscovery)) {
+				return true;
+			}
 		}
 
-		// Only reconcile resources with the server discovery label
-		String serverDiscovery = labels.get(DeploymentLabel.SERVER_DISCOVERY.getLabel());
-		return "true".equals(serverDiscovery);
+		// Also check spec.template.metadata.labels (pod template labels)
+		Map<String, String> templateLabels = null;
+		if (resource instanceof Deployment deployment) {
+			templateLabels = deployment.getSpec().getTemplate().getMetadata().getLabels();
+		} else if (resource instanceof StatefulSet statefulSet) {
+			templateLabels = statefulSet.getSpec().getTemplate().getMetadata().getLabels();
+		}
+
+		if (templateLabels != null) {
+			String serverDiscovery = templateLabels.get(DeploymentLabel.SERVER_DISCOVERY.getLabel());
+			return "true".equals(serverDiscovery);
+		}
+
+		return false;
 	}
 
 	public void start() {
@@ -177,8 +192,7 @@ public class InformerManager {
 
 				int autoscaledCount = 0;
 				for (Deployment d : deployments.getItems()) {
-					Map<String, String> labels = d.getMetadata().getLabels();
-					if (labels != null && "true".equals(labels.get(DeploymentLabel.SERVER_DISCOVERY.getLabel()))) {
+					if (shouldReconcile(d)) {
 						autoscaledCount++;
 						System.out.println("  - " + d.getMetadata().getNamespace() + "/" + d.getMetadata().getName() + " (has server-discovery label)");
 					}
@@ -187,6 +201,7 @@ public class InformerManager {
 				if (autoscaledCount == 0) {
 					System.out.println("\n⚠️  WARNING: No deployments found with 'server-discovery: true' label!");
 					System.out.println("   The autoscaler will not do anything until you add this label to a deployment.");
+					System.out.println("   Label can be in metadata.labels OR spec.template.metadata.labels");
 					System.out.println("   Example: kubectl label deployment <name> server-discovery=true");
 				} else {
 					System.out.println("\n✓ Found " + autoscaledCount + " deployment(s) with server-discovery label");
