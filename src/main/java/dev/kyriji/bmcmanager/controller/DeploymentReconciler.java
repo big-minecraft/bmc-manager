@@ -149,13 +149,28 @@ public class DeploymentReconciler {
 	}
 
 	private boolean shouldAutoscale(HasMetadata resource) {
+		// Check deployment/statefulset metadata labels first
 		Map<String, String> labels = resource.getMetadata().getLabels();
-		if (labels == null) {
-			return false;
+		if (labels != null) {
+			String serverDiscovery = labels.get(DeploymentLabel.SERVER_DISCOVERY.getLabel());
+			if ("true".equals(serverDiscovery)) {
+				return true;
+			}
 		}
 
-		// Check for the server discovery label
-		String serverDiscovery = labels.get(DeploymentLabel.SERVER_DISCOVERY.getLabel());
-		return "true".equals(serverDiscovery);
+		// Also check spec.template.metadata.labels (pod template labels)
+		Map<String, String> templateLabels = null;
+		if (resource instanceof Deployment deployment) {
+			templateLabels = deployment.getSpec().getTemplate().getMetadata().getLabels();
+		} else if (resource instanceof StatefulSet statefulSet) {
+			templateLabels = statefulSet.getSpec().getTemplate().getMetadata().getLabels();
+		}
+
+		if (templateLabels != null) {
+			String serverDiscovery = templateLabels.get(DeploymentLabel.SERVER_DISCOVERY.getLabel());
+			return "true".equals(serverDiscovery);
+		}
+
+		return false;
 	}
 }
