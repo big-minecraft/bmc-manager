@@ -191,7 +191,7 @@ public class ScalingLogic {
 				System.out.println("  Scale-up limit: " + scaleUpLimit);
 			}
 
-			while(playersPerInstance > targetRatio && instancesToAdd < scaleUpLimit) {
+			while(playersPerInstance >= targetRatio && instancesToAdd < scaleUpLimit) {
 				activeCurrentInstances++;
 				instancesToAdd++;
 				playersPerInstance = (double) playerCount / activeCurrentInstances;
@@ -216,7 +216,7 @@ public class ScalingLogic {
 				System.out.println("  Scale-down limit: " + scaleDownLimit);
 			}
 
-			while(playersPerInstance < targetRatio && -instancesToAdd < scaleDownLimit && activeCurrentInstances > 1) {
+			while(playersPerInstance <= targetRatio && -instancesToAdd < scaleDownLimit && activeCurrentInstances > 1) {
 				activeCurrentInstances--;
 				instancesToAdd--;
 				playersPerInstance = (double) playerCount / activeCurrentInstances;

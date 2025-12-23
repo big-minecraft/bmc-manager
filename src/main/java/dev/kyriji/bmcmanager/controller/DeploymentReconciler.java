@@ -15,11 +15,6 @@ import java.lang.reflect.Type;
 import java.util.Map;
 
 public class DeploymentReconciler {
-	// ============ DEBUG FLAG ============
-	// Set to false to disable all scaling debug output
-	private static final boolean DEBUG_SCALING = true;
-	// ====================================
-
 	private final KubernetesClient client;
 	private final ScalingLogic scalingLogic;
 	private final ScalingExecutor scalingExecutor;
@@ -32,29 +27,15 @@ public class DeploymentReconciler {
 
 	public ReconcileResult reconcile(ReconcileRequest request) {
 		try {
-			if (DEBUG_SCALING) {
-				System.out.println("\n########## RECONCILIATION START ##########");
-				System.out.println("Resource: " + request.getNamespace() + "/" + request.getName());
-				System.out.println("Type: " + request.getResourceType());
-			}
-
 			// 1. Fetch resource from Kubernetes
 			HasMetadata resource = fetchResource(request);
 			if (resource == null) {
-				if (DEBUG_SCALING) {
-					System.out.println("Resource not found in Kubernetes - SKIPPING");
-					System.out.println("########## RECONCILIATION END ##########\n");
-				}
 				// Resource not found, don't requeue
 				return ReconcileResult.noRequeue();
 			}
 
 			// 2. Check if it should be autoscaled
 			if (!shouldAutoscale(resource)) {
-				if (DEBUG_SCALING) {
-					System.out.println("Resource does not have 'server-discovery: true' label - SKIPPING");
-					System.out.println("########## RECONCILIATION END ##########\n");
-				}
 				// Not enabled for autoscaling, don't requeue
 				return ReconcileResult.noRequeue();
 			}
@@ -62,10 +43,6 @@ public class DeploymentReconciler {
 			// 3. Check if replicas are set to 0 (deployment is disabled)
 			int currentReplicas = scalingExecutor.getCurrentReplicas(resource);
 			if (currentReplicas == 0) {
-				if (DEBUG_SCALING) {
-					System.out.println("Deployment has 0 replicas (disabled) - SKIPPING");
-					System.out.println("########## RECONCILIATION END ##########\n");
-				}
 				// Deployment is disabled, don't scale
 				return ReconcileResult.noRequeue();
 			}
@@ -73,28 +50,15 @@ public class DeploymentReconciler {
 			// 4. Get the DeploymentWrapper from the registry
 			DeploymentWrapper<?> wrapper = BMCManager.deploymentManager.getDeployment(request.getName());
 			if (wrapper == null) {
-				if (DEBUG_SCALING) {
-					System.out.println("Deployment not registered yet - REQUEUING in 5s");
-					System.out.println("########## RECONCILIATION END ##########\n");
-				}
 				// Not registered yet, requeue to try again later
 				return ReconcileResult.requeueAfter(5000);
 			}
 
 			// 5. Only handle MinecraftInstance deployments for now
 			Type instanceType = wrapper.getInstanceType();
-			if (DEBUG_SCALING) {
-				System.out.println("Deployment instance type: " + instanceType);
-			}
 
 			// Check if the type is MinecraftInstance.class
 			if (!MinecraftInstance.class.equals(instanceType)) {
-				if (DEBUG_SCALING) {
-					System.out.println("Not a MinecraftInstance deployment - SKIPPING");
-					System.out.println("  Expected: " + MinecraftInstance.class);
-					System.out.println("  Got: " + instanceType);
-					System.out.println("########## RECONCILIATION END ##########\n");
-				}
 				return ReconcileResult.noRequeue();
 			}
 
@@ -102,13 +66,7 @@ public class DeploymentReconciler {
 			DeploymentWrapper<MinecraftInstance> minecraftWrapper = (DeploymentWrapper<MinecraftInstance>) wrapper;
 
 			// 6. Fetch latest instance data from Redis
-			if (DEBUG_SCALING) {
-				System.out.println("Fetching latest instance data from Redis...");
-			}
 			minecraftWrapper.fetchInstances();
-			if (DEBUG_SCALING) {
-				System.out.println("Total instances: " + minecraftWrapper.getInstances().size());
-			}
 
 			// 7. Determine scaling action
 			ScalingDecision decision = scalingLogic.determineScalingAction(minecraftWrapper);
@@ -120,20 +78,12 @@ public class DeploymentReconciler {
 			}
 
 			// 9. Always requeue after 5 seconds for periodic checks
-			if (DEBUG_SCALING) {
-				System.out.println("Requeuing in 5 seconds for next check");
-				System.out.println("########## RECONCILIATION END ##########\n");
-			}
 			return ReconcileResult.requeueAfter(5000);
 
 		} catch (Exception e) {
 			// Log error and requeue after longer delay
 			System.err.println("Error reconciling " + request + ": " + e.getMessage());
 			e.printStackTrace();
-			if (DEBUG_SCALING) {
-				System.out.println("Requeuing in 10 seconds due to error");
-				System.out.println("########## RECONCILIATION END (ERROR) ##########\n");
-			}
 			return ReconcileResult.requeueAfter(10000);
 		}
 	}
