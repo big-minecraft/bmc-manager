@@ -81,21 +81,15 @@ public class ScalingExecutor {
 				.inNamespace(namespace)
 				.resource(deployment)
 				.update();
-		} else if (resource instanceof StatefulSet statefulSet) {
-			statefulSet.getSpec().setReplicas(replicas);
-			client.apps().statefulSets()
-				.inNamespace(namespace)
-				.resource(statefulSet)
-				.update();
 		}
+		// StatefulSet scaling removed - only Deployments are scaled
 	}
 
 	public int getCurrentReplicas(HasMetadata resource) {
 		if (resource instanceof Deployment deployment) {
 			return deployment.getSpec().getReplicas();
-		} else if (resource instanceof StatefulSet statefulSet) {
-			return statefulSet.getSpec().getReplicas();
 		}
+		// StatefulSet scaling removed - only Deployments are scaled
 		return 0;
 	}
 }

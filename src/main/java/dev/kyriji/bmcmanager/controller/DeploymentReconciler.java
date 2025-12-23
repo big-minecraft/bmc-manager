@@ -34,27 +34,32 @@ public class DeploymentReconciler {
 				return ReconcileResult.noRequeue();
 			}
 
-			// 2. Check if it should be autoscaled
+			// 2. Skip scaling for StatefulSets (only monitor, don't scale)
+			if (resource instanceof StatefulSet) {
+				return ReconcileResult.noRequeue();
+			}
+
+			// 3. Check if it should be autoscaled
 			if (!shouldAutoscale(resource)) {
 				// Not enabled for autoscaling, don't requeue
 				return ReconcileResult.noRequeue();
 			}
 
-			// 3. Check if replicas are set to 0 (deployment is disabled)
+			// 4. Check if replicas are set to 0 (deployment is disabled)
 			int currentReplicas = scalingExecutor.getCurrentReplicas(resource);
 			if (currentReplicas == 0) {
 				// Deployment is disabled, don't scale
 				return ReconcileResult.noRequeue();
 			}
 
-			// 4. Get the DeploymentWrapper from the registry
+			// 5. Get the DeploymentWrapper from the registry
 			DeploymentWrapper<?> wrapper = BMCManager.deploymentManager.getDeployment(request.getName());
 			if (wrapper == null) {
 				// Not registered yet, requeue to try again later
 				return ReconcileResult.requeueAfter(5000);
 			}
 
-			// 5. Only handle MinecraftInstance deployments for now
+			// 6. Only handle MinecraftInstance deployments for now
 			Type instanceType = wrapper.getInstanceType();
 
 			// Check if the type is MinecraftInstance.class
@@ -65,19 +70,19 @@ public class DeploymentReconciler {
 			@SuppressWarnings("unchecked")
 			DeploymentWrapper<MinecraftInstance> minecraftWrapper = (DeploymentWrapper<MinecraftInstance>) wrapper;
 
-			// 6. Fetch latest instance data from Redis
+			// 7. Fetch latest instance data from Redis
 			minecraftWrapper.fetchInstances();
 
-			// 7. Determine scaling action
+			// 8. Determine scaling action
 			ScalingDecision decision = scalingLogic.determineScalingAction(minecraftWrapper);
 
-			// 8. Execute scaling if needed
+			// 9. Execute scaling if needed
 			if (decision.getAction() != dev.kyriji.bmcmanager.enums.ScaleResult.NO_CHANGE) {
 				scalingExecutor.executeScaling(decision, resource, wrapper);
 				System.out.println("Scaled " + request.getName() + ": " + decision);
 			}
 
-			// 9. Always requeue after 5 seconds for periodic checks
+			// 10. Always requeue after 5 seconds for periodic checks
 			return ReconcileResult.requeueAfter(5000);
 
 		} catch (Exception e) {
