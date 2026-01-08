@@ -228,7 +228,9 @@ public class ScalingLogic {
 			}
 		}
 
-		int targetReplicas = deploymentWrapper.getInstances().size() + instancesToAdd;
+		// Use active instance count (RUNNING only) as the base for target replicas
+		// This ensures minimum instances refers to minimum QUEUABLE instances
+		int targetReplicas = getActiveInstanceCount(deploymentWrapper) + instancesToAdd;
 
 		if (DEBUG_SCALING) {
 			System.out.println("Target replicas: " + targetReplicas);
