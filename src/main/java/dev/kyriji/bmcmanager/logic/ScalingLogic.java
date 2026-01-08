@@ -246,9 +246,10 @@ public class ScalingLogic {
 			}
 		}
 
-		// Use active instance count (RUNNING only) as the base for target replicas
-		// This ensures minimum instances refers to minimum QUEUABLE instances
-		int targetReplicas = getActiveInstanceCount(deploymentWrapper) + instancesToAdd;
+		// Calculate target replicas = total existing instances + instances to add/remove
+		// instancesToAdd is based on ACTIVE (RUNNING) instances, but we add to total count
+		// This ensures we account for BLOCKED/STARTING/STOPPING instances in the replica count
+		int targetReplicas = deploymentWrapper.getInstances().size() + instancesToAdd;
 
 		if (DEBUG_SCALING) {
 			System.out.println("Target replicas: " + targetReplicas);
