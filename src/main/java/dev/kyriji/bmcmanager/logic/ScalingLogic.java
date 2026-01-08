@@ -123,6 +123,15 @@ public class ScalingLogic {
 			System.out.println("Active instances: " + instances);
 		}
 
+		// Enforce minimum instances: scale up if below minimum
+		if(instances < settings.minInstances) {
+			if (DEBUG_SCALING) {
+				System.out.println("Decision: SCALE UP (below minimum: " + instances + " < " + settings.minInstances + ")");
+				System.out.println("--- End Threshold Check ---");
+			}
+			return ScaleResult.UP;
+		}
+
 		// Avoid division by zero
 		if(instances == 0) {
 			if (DEBUG_SCALING) {
@@ -181,25 +190,34 @@ public class ScalingLogic {
 			int scaleUpLimit = settings.scaleUpLimit;
 			double targetRatio = settings.scaleUpThreshold;
 
-			// Calculate how many instances to add (up to scaleUpLimit)
-			double playersPerInstance = (double) playerCount / activeCurrentInstances;
+			// Special case: if we have 0 active instances, add up to minimum (respecting scaleUpLimit)
+			if(activeCurrentInstances == 0) {
+				instancesToAdd = Math.min(settings.minInstances, scaleUpLimit);
+				if (DEBUG_SCALING) {
+					System.out.println("Scale-up calculation (from 0 active instances):");
+					System.out.println("  Adding " + instancesToAdd + " instances to reach minimum");
+				}
+			} else {
+				// Calculate how many instances to add (up to scaleUpLimit)
+				double playersPerInstance = (double) playerCount / activeCurrentInstances;
 
-			if (DEBUG_SCALING) {
-				System.out.println("Scale-up calculation:");
-				System.out.println("  Starting ratio: " + String.format("%.2f", playersPerInstance));
-				System.out.println("  Target ratio: " + targetRatio);
-				System.out.println("  Scale-up limit: " + scaleUpLimit);
-			}
+				if (DEBUG_SCALING) {
+					System.out.println("Scale-up calculation:");
+					System.out.println("  Starting ratio: " + String.format("%.2f", playersPerInstance));
+					System.out.println("  Target ratio: " + targetRatio);
+					System.out.println("  Scale-up limit: " + scaleUpLimit);
+				}
 
-			while(playersPerInstance >= targetRatio && instancesToAdd < scaleUpLimit) {
-				activeCurrentInstances++;
-				instancesToAdd++;
-				playersPerInstance = (double) playerCount / activeCurrentInstances;
-			}
+				while(playersPerInstance >= targetRatio && instancesToAdd < scaleUpLimit) {
+					activeCurrentInstances++;
+					instancesToAdd++;
+					playersPerInstance = (double) playerCount / activeCurrentInstances;
+				}
 
-			if (DEBUG_SCALING) {
-				System.out.println("  Instances to add: " + instancesToAdd);
-				System.out.println("  Final ratio: " + String.format("%.2f", playersPerInstance));
+				if (DEBUG_SCALING) {
+					System.out.println("  Instances to add: " + instancesToAdd);
+					System.out.println("  Final ratio: " + String.format("%.2f", playersPerInstance));
+				}
 			}
 
 		} else if(result == ScaleResult.DOWN) {
