@@ -113,7 +113,7 @@ public class ScalingLogic {
 	}
 
 	private ScaleResult checkToScaleThreshold(DeploymentWrapper<MinecraftInstance> deploymentWrapper) {
-		int instances = getActiveInstanceCount(deploymentWrapper);
+		int instances = deploymentWrapper.getInstances().size();
 		int playerCount = getPlayerCount(deploymentWrapper);
 		ScalingSettings settings = deploymentWrapper.getScalingSettings();
 
