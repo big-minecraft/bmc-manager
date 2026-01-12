@@ -16,7 +16,7 @@ import java.util.List;
 public class ScalingLogic {
 	// ============ DEBUG FLAG ============
 	// Set to false to disable all scaling debug output
-	private static final boolean DEBUG_SCALING = false;
+	private static final boolean DEBUG_SCALING = true;
 	// ====================================
 
 	public ScalingDecision determineScalingAction(DeploymentWrapper<MinecraftInstance> deploymentWrapper) {
@@ -113,27 +113,29 @@ public class ScalingLogic {
 	}
 
 	private ScaleResult checkToScaleThreshold(DeploymentWrapper<MinecraftInstance> deploymentWrapper) {
-		int instances = deploymentWrapper.getInstances().size();
+		int totalInstances = deploymentWrapper.getInstances().size();
+		int activeInstances = getActiveInstanceCount(deploymentWrapper);
 		int playerCount = getPlayerCount(deploymentWrapper);
 		ScalingSettings settings = deploymentWrapper.getScalingSettings();
 
 		if (DEBUG_SCALING) {
 			System.out.println("\n--- Threshold Check ---");
 			System.out.println("Total players: " + playerCount);
-			System.out.println("Active instances: " + instances);
+			System.out.println("Total instances: " + totalInstances);
+			System.out.println("Active (RUNNING) instances: " + activeInstances);
 		}
 
-		// Enforce minimum instances: scale up if below minimum
-		if(instances < settings.minInstances) {
+		// Enforce minimum instances: scale up if below minimum ACTIVE instances
+		if(activeInstances < settings.minInstances) {
 			if (DEBUG_SCALING) {
-				System.out.println("Decision: SCALE UP (below minimum: " + instances + " < " + settings.minInstances + ")");
+				System.out.println("Decision: SCALE UP (below minimum: " + activeInstances + " < " + settings.minInstances + ")");
 				System.out.println("--- End Threshold Check ---");
 			}
 			return ScaleResult.UP;
 		}
 
 		// Avoid division by zero
-		if(instances == 0) {
+		if(activeInstances == 0) {
 			if (DEBUG_SCALING) {
 				System.out.println("No active instances, cannot calculate ratio");
 				System.out.println("--- End Threshold Check ---");
@@ -141,7 +143,7 @@ public class ScalingLogic {
 			return ScaleResult.NO_CHANGE;
 		}
 
-		double playersPerInstance = (double) playerCount / instances;
+		double playersPerInstance = (double) playerCount / activeInstances;
 
 		if (DEBUG_SCALING) {
 			System.out.println("Players per instance: " + String.format("%.2f", playersPerInstance));
