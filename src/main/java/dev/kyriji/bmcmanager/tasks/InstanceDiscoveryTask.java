@@ -24,10 +24,10 @@ public class InstanceDiscoveryTask {
 
 		new Thread(() -> {
 			while (true) {
-				discoverInstances();
 				try {
+					discoverInstances();
 					Thread.sleep(5000);
-				} catch (InterruptedException e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -61,6 +61,7 @@ public class InstanceDiscoveryTask {
 		});
 
 		BMCManager.deploymentManager.getDeployments().forEach(DeploymentWrapper::fetchInstances);
+
 		RedisManager.get().updateTimestamp();
 	}
 
