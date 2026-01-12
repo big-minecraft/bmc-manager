@@ -35,7 +35,7 @@ public class ScalingLogic {
 			case TREND -> checkToScaleTrend(deploymentWrapper);
 		};
 
-		int currentInstances = getActiveInstanceCount(deploymentWrapper);
+		int currentInstances = deploymentWrapper.getInstances().size();
 
 		if (DEBUG_SCALING) {
 			System.out.println("Current active instances: " + currentInstances);
