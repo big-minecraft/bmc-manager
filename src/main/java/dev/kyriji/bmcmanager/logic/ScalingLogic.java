@@ -35,38 +35,40 @@ public class ScalingLogic {
 			case TREND -> checkToScaleTrend(deploymentWrapper);
 		};
 
-		int currentInstances = deploymentWrapper.getInstances().size();
+		int totalInstances = deploymentWrapper.getInstances().size();
+		int activeInstances = getActiveInstanceCount(deploymentWrapper);
 
 		if (DEBUG_SCALING) {
-			System.out.println("Current active instances: " + currentInstances);
+			System.out.println("Total instances: " + totalInstances);
+			System.out.println("Active (RUNNING) instances: " + activeInstances);
 			System.out.println("Initial decision: " + result);
 		}
 
 		// Check constraints (min/max instances and cooldowns)
-		if(result == ScaleResult.UP && (currentInstances >= settings.maxInstances || deploymentWrapper.isOnScaleUpCooldown())) {
+		if(result == ScaleResult.UP && (totalInstances >= settings.maxInstances || deploymentWrapper.isOnScaleUpCooldown())) {
 			if (DEBUG_SCALING) {
 				System.out.println("Scale-up BLOCKED:");
-				if (currentInstances >= settings.maxInstances) {
-					System.out.println("  - At max instances (" + currentInstances + " >= " + settings.maxInstances + ")");
+				if (totalInstances >= settings.maxInstances) {
+					System.out.println("  - At max instances (" + totalInstances + " >= " + settings.maxInstances + ")");
 				}
 				if (deploymentWrapper.isOnScaleUpCooldown()) {
 					System.out.println("  - On scale-up cooldown");
 				}
 				System.out.println("========== SCALING DECISION END (NO CHANGE) ==========\n");
 			}
-			return ScalingDecision.noChange(currentInstances);
-		} else if(result == ScaleResult.DOWN && (currentInstances <= settings.minInstances || deploymentWrapper.isOnScaleDownCooldown())) {
+			return ScalingDecision.noChange(totalInstances);
+		} else if(result == ScaleResult.DOWN && (totalInstances <= settings.minInstances || deploymentWrapper.isOnScaleDownCooldown())) {
 			if (DEBUG_SCALING) {
 				System.out.println("Scale-down BLOCKED:");
-				if (currentInstances <= settings.minInstances) {
-					System.out.println("  - At min instances (" + currentInstances + " <= " + settings.minInstances + ")");
+				if (totalInstances <= settings.minInstances) {
+					System.out.println("  - At min instances (" + totalInstances + " <= " + settings.minInstances + ")");
 				}
 				if (deploymentWrapper.isOnScaleDownCooldown()) {
 					System.out.println("  - On scale-down cooldown");
 				}
 				System.out.println("========== SCALING DECISION END (NO CHANGE) ==========\n");
 			}
-			return ScalingDecision.noChange(currentInstances);
+			return ScalingDecision.noChange(totalInstances);
 		}
 
 		// If no change needed, return early
@@ -75,40 +77,40 @@ public class ScalingLogic {
 				System.out.println("No scaling needed based on thresholds");
 				System.out.println("========== SCALING DECISION END (NO CHANGE) ==========\n");
 			}
-			return ScalingDecision.noChange(currentInstances);
+			return ScalingDecision.noChange(totalInstances);
 		}
 
 		// Calculate target replicas
 		int targetReplicas = calculateTargetReplicas(deploymentWrapper, result);
 
 		// If target equals current, no change needed
-		if(targetReplicas == currentInstances) {
+		if(targetReplicas == totalInstances) {
 			if (DEBUG_SCALING) {
-				System.out.println("Target replicas (" + targetReplicas + ") equals current (" + currentInstances + "), no change needed");
+				System.out.println("Target replicas (" + targetReplicas + ") equals current (" + totalInstances + "), no change needed");
 				System.out.println("========== SCALING DECISION END (NO CHANGE) ==========\n");
 			}
-			return ScalingDecision.noChange(currentInstances);
+			return ScalingDecision.noChange(totalInstances);
 		}
 
 		// For scale-down, select specific pods to delete
 		if(result == ScaleResult.DOWN) {
-			int podsToRemove = currentInstances - targetReplicas;
+			int podsToRemove = totalInstances - targetReplicas;
 			if (DEBUG_SCALING) {
-				System.out.println("Scaling DOWN: " + currentInstances + " -> " + targetReplicas + " (removing " + podsToRemove + " instances)");
+				System.out.println("Scaling DOWN: " + totalInstances + " -> " + targetReplicas + " (removing " + podsToRemove + " instances)");
 			}
 			List<MinecraftInstance> podsToDelete = selectPodsForScaleDown(deploymentWrapper.getInstances(), podsToRemove);
 			if (DEBUG_SCALING) {
 				System.out.println("========== SCALING DECISION END (SCALE DOWN) ==========\n");
 			}
-			return ScalingDecision.scaleDown(currentInstances, targetReplicas, podsToDelete);
+			return ScalingDecision.scaleDown(totalInstances, targetReplicas, podsToDelete);
 		} else {
 			// Scale up - no specific pods to select
-			int podsToAdd = targetReplicas - currentInstances;
+			int podsToAdd = targetReplicas - totalInstances;
 			if (DEBUG_SCALING) {
-				System.out.println("Scaling UP: " + currentInstances + " -> " + targetReplicas + " (adding " + podsToAdd + " instances)");
+				System.out.println("Scaling UP: " + totalInstances + " -> " + targetReplicas + " (adding " + podsToAdd + " instances)");
 				System.out.println("========== SCALING DECISION END (SCALE UP) ==========\n");
 			}
-			return ScalingDecision.scaleUp(currentInstances, targetReplicas);
+			return ScalingDecision.scaleUp(totalInstances, targetReplicas);
 		}
 	}
 
@@ -300,8 +302,13 @@ public class ScalingLogic {
 	}
 
 	private int getActiveInstanceCount(DeploymentWrapper<? extends Instance> deploymentWrapper) {
+		// Count RUNNING and STARTING instances as "active" for minimum instance checks
+		// STARTING instances are provisioned capacity that will soon be RUNNING
+		// BLOCKED, STOPPING, and STOPPED instances don't count
 		return (int) deploymentWrapper.getInstances().stream()
-			.filter(instance -> instance.getState() == InstanceState.RUNNING)
+			.filter(instance ->
+				instance.getState() == InstanceState.RUNNING ||
+				instance.getState() == InstanceState.STARTING)
 			.count();
 	}
 }
