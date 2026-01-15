@@ -43,32 +43,32 @@ public class ScalingExecutor {
 	}
 
 	private void scaleDown(ScalingDecision decision, HasMetadata resource, String namespace, String name, DeploymentWrapper<?> wrapper) {
-		// CRITICAL FIX: Update replicas BEFORE deleting pods to avoid race condition
+		// CRITICAL: We must manually delete specific pods to control WHICH instances are removed
+		// (e.g., those with fewest players). If we just update replicas, Kubernetes chooses randomly.
 
-		// Step 1: Mark instances as draining in Redis (prevents new players from joining)
+		// Step 1: Mark instances as STOPPING in Redis (prevents new players from joining)
 		for (Instance instance : decision.getPodsToDelete()) {
 			instance.setState(InstanceState.STOPPING);
 			RedisManager.get().updateInstance(instance);
 		}
 
-		// Step 2: Update replica count FIRST
-		// This tells Kubernetes the new desired state before we delete any pods
-		// This prevents Kubernetes from recreating the pods we're about to delete
-		updateReplicas(resource, namespace, name, decision.getTargetReplicas());
-
-		// Step 3: Delete specific pods
-		// Since we already updated the desired replica count, Kubernetes won't recreate these pods
+		// Step 2: Manually delete the specific pods we selected
+		// This ensures we remove instances with fewest players
 		for (Instance instance : decision.getPodsToDelete()) {
 			try {
 				client.pods()
 					.inNamespace(namespace)
 					.withName(instance.getPodName())
 					.delete();
+				System.out.println("Deleted pod: " + instance.getPodName() + " (selected for scale-down)");
 			} catch (Exception e) {
-				// Log error but continue - Kubernetes will eventually reconcile
 				System.err.println("Failed to delete pod " + instance.getPodName() + ": " + e.getMessage());
 			}
 		}
+
+		// Step 3: Update replica count AFTER deleting pods
+		// This prevents Kubernetes from creating replacements for the pods we just deleted
+		updateReplicas(resource, namespace, name, decision.getTargetReplicas());
 
 		// Step 4: Update cooldown timestamp
 		wrapper.setLastScaleDown(System.currentTimeMillis());
