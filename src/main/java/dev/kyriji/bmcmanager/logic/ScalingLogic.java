@@ -35,7 +35,7 @@ public class ScalingLogic {
 			case TREND -> checkToScaleTrend(deploymentWrapper);
 		};
 
-		int totalInstances = deploymentWrapper.getInstances().size();
+		int totalInstances = getTotalNonTerminatingInstanceCount(deploymentWrapper);
 		int activeInstances = getActiveInstanceCount(deploymentWrapper);
 
 		if (DEBUG_SCALING) {
@@ -115,7 +115,7 @@ public class ScalingLogic {
 	}
 
 	private ScaleResult checkToScaleThreshold(DeploymentWrapper<MinecraftInstance> deploymentWrapper) {
-		int totalInstances = deploymentWrapper.getInstances().size();
+		int totalInstances = getTotalNonTerminatingInstanceCount(deploymentWrapper);
 		int activeInstances = getActiveInstanceCount(deploymentWrapper);
 		int playerCount = getPlayerCount(deploymentWrapper);
 		ScalingSettings settings = deploymentWrapper.getScalingSettings();
@@ -255,10 +255,10 @@ public class ScalingLogic {
 			}
 		}
 
-		// Calculate target replicas = total existing instances + instances to add/remove
-		// instancesToAdd is based on ACTIVE (RUNNING) instances, but we add to total count
-		// This ensures we account for BLOCKED/STARTING/STOPPING instances in the replica count
-		int targetReplicas = deploymentWrapper.getInstances().size() + instancesToAdd;
+		// Calculate target replicas = total non-terminating instances + instances to add/remove
+		// instancesToAdd is based on ACTIVE (RUNNING+STARTING) instances, but we add to total count
+		// This ensures we account for BLOCKED/STARTING instances (but NOT STOPPING/STOPPED)
+		int targetReplicas = getTotalNonTerminatingInstanceCount(deploymentWrapper) + instancesToAdd;
 
 		if (DEBUG_SCALING) {
 			System.out.println("Target replicas: " + targetReplicas);
@@ -314,6 +314,16 @@ public class ScalingLogic {
 			.filter(instance ->
 				instance.getState() == InstanceState.RUNNING ||
 				instance.getState() == InstanceState.STARTING)
+			.count();
+	}
+
+	private int getTotalNonTerminatingInstanceCount(DeploymentWrapper<? extends Instance> deploymentWrapper) {
+		// Count all instances EXCEPT those that are shutting down (STOPPING/STOPPED)
+		// This gives us the "real" total that should match the deployment replica count
+		return (int) deploymentWrapper.getInstances().stream()
+			.filter(instance ->
+				instance.getState() != InstanceState.STOPPING &&
+				instance.getState() != InstanceState.STOPPED)
 			.count();
 	}
 }

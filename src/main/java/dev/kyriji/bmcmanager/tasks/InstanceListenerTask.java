@@ -107,6 +107,8 @@ public class InstanceListenerTask {
 
 	private void turnOffPod(MinecraftInstance instance) {
 		try {
+			// Note: ScalingExecutor handles replica count updates for autoscaled pods
+			// This method just deletes the pod itself
 			BMCManager.kubernetesClient.pods()
 				.inNamespace("default")
 				.withName(instance.getPodName())
