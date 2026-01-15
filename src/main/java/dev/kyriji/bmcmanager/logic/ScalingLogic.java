@@ -57,11 +57,11 @@ public class ScalingLogic {
 				System.out.println("========== SCALING DECISION END (NO CHANGE) ==========\n");
 			}
 			return ScalingDecision.noChange(totalInstances);
-		} else if(result == ScaleResult.DOWN && (totalInstances <= settings.minInstances || deploymentWrapper.isOnScaleDownCooldown())) {
+		} else if(result == ScaleResult.DOWN && (activeInstances <= settings.minInstances || deploymentWrapper.isOnScaleDownCooldown())) {
 			if (DEBUG_SCALING) {
 				System.out.println("Scale-down BLOCKED:");
-				if (totalInstances <= settings.minInstances) {
-					System.out.println("  - At min instances (" + totalInstances + " <= " + settings.minInstances + ")");
+				if (activeInstances <= settings.minInstances) {
+					System.out.println("  - At min active instances (" + activeInstances + " <= " + settings.minInstances + ")");
 				}
 				if (deploymentWrapper.isOnScaleDownCooldown()) {
 					System.out.println("  - On scale-down cooldown");
