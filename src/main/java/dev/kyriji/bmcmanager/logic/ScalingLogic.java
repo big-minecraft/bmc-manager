@@ -40,7 +40,7 @@ public class ScalingLogic {
 
 		if (DEBUG_SCALING) {
 			System.out.println("Total instances: " + totalInstances);
-			System.out.println("Active (RUNNING) instances: " + activeInstances);
+			System.out.println("Active (RUNNING+STARTING) instances: " + activeInstances);
 			System.out.println("Initial decision: " + result);
 		}
 
@@ -124,7 +124,7 @@ public class ScalingLogic {
 			System.out.println("\n--- Threshold Check ---");
 			System.out.println("Total players: " + playerCount);
 			System.out.println("Total instances: " + totalInstances);
-			System.out.println("Active (RUNNING) instances: " + activeInstances);
+			System.out.println("Active (RUNNING+STARTING) instances: " + activeInstances);
 		}
 
 		// Enforce minimum instances: scale up if below minimum ACTIVE instances
