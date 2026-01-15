@@ -107,8 +107,29 @@ public class InstanceListenerTask {
 
 	private void turnOffPod(MinecraftInstance instance) {
 		try {
-			// Note: ScalingExecutor handles replica count updates for autoscaled pods
-			// This method just deletes the pod itself
+			// CRITICAL: Decrement deployment replicas BEFORE deleting pod
+			// When a server self-terminates (e.g., BLOCKED server shuts down after player leaves),
+			// we need to update the replica count to prevent Kubernetes from creating a replacement pod
+			String deploymentName = instance.getDeployment();
+			var deployment = BMCManager.kubernetesClient.apps().deployments()
+				.inNamespace("default")
+				.withName(deploymentName)
+				.get();
+
+			if (deployment != null) {
+				int currentReplicas = deployment.getSpec().getReplicas();
+				if (currentReplicas > 0) {
+					int newReplicas = currentReplicas - 1;
+					deployment.getSpec().setReplicas(newReplicas);
+					BMCManager.kubernetesClient.apps().deployments()
+						.inNamespace("default")
+						.resource(deployment)
+						.update();
+					System.out.println("Decremented " + deploymentName + " replicas: " + currentReplicas + " -> " + newReplicas);
+				}
+			}
+
+			// Now delete the pod - Kubernetes won't recreate it since replicas was decremented
 			BMCManager.kubernetesClient.pods()
 				.inNamespace("default")
 				.withName(instance.getPodName())
