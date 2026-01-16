@@ -1,7 +1,6 @@
 package dev.kyriji.bmcmanager.factories;
 
 import dev.kyriji.bigminecraftapi.enums.InstanceState;
-import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.enums.DeploymentType;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
@@ -9,8 +8,12 @@ import io.fabric8.kubernetes.api.model.Pod;
 
 public class InstanceFactory {
 
+	// Label used by PodBuilder to identify deployment type
+	private static final String DEPLOYMENT_TYPE_LABEL = "kyriji.dev/deployment-type";
+
 	public static Instance createFromPod(Pod pod) {
-		DeploymentType type = DeploymentType.getType(pod.getMetadata().getLabels().get(DeploymentLabel.DEPLOYMENT_TYPE.getLabel()));
+		String typeLabel = pod.getMetadata().getLabels().get(DEPLOYMENT_TYPE_LABEL);
+		DeploymentType type = DeploymentType.getType(typeLabel);
 		if(type == null) return null;
 
 		String name = generateName(pod);
@@ -27,10 +30,9 @@ public class InstanceFactory {
 
 		System.out.println(name);
 
-		if(pod.getMetadata().getLabels().containsKey(DeploymentLabel.REQUIRE_STARTUP_CONFIRMATION.getLabel())) {
-			boolean requiresStartupConfirmation = Boolean.parseBoolean(pod.getMetadata().getLabels().get(DeploymentLabel.REQUIRE_STARTUP_CONFIRMATION.getLabel()));
-			instance.setState(requiresStartupConfirmation ? InstanceState.STARTING: InstanceState.RUNNING);
-		}
+		// Check for startup confirmation requirement
+		// New pods start in STARTING state by default, the server will update to RUNNING when ready
+		instance.setState(InstanceState.STARTING);
 
 		return instance;
 	}

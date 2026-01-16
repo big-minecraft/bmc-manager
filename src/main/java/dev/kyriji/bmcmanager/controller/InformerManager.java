@@ -1,118 +1,60 @@
 package dev.kyriji.bmcmanager.controller;
 
-import dev.kyriji.bmcmanager.enums.DeploymentLabel;
+import dev.kyriji.bmcmanager.crd.GameServer;
 import dev.kyriji.bmcmanager.objects.ReconcileRequest;
 import dev.kyriji.bmcmanager.objects.ReconcileResult;
-import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.apps.Deployment;
-import io.fabric8.kubernetes.api.model.apps.DeploymentList;
-import io.fabric8.kubernetes.api.model.apps.StatefulSet;
-import io.fabric8.kubernetes.api.model.apps.StatefulSetList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.fabric8.kubernetes.client.informers.SharedInformerFactory;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class InformerManager {
 	private final KubernetesClient client;
 	private final SharedInformerFactory informerFactory;
 	private final ReconciliationQueue queue;
-	private final DeploymentReconciler reconciler;
+	private final GameServerReconciler reconciler;
 	private final AtomicBoolean running = new AtomicBoolean(false);
 	private Thread reconciliationThread;
+	private SharedIndexInformer<GameServer> gameServerInformer;
 
 	public InformerManager(KubernetesClient client, ReconciliationQueue queue) {
 		this.client = client;
 		this.queue = queue;
-		this.reconciler = new DeploymentReconciler(client);
+		this.reconciler = new GameServerReconciler(client);
 		this.informerFactory = client.informers();
 	}
 
 	public void setupInformers() {
-		// Setup Deployment informer
-		SharedIndexInformer<Deployment> deploymentInformer = informerFactory.sharedIndexInformerFor(
-			Deployment.class,
+		// Setup GameServer CRD informer
+		gameServerInformer = informerFactory.sharedIndexInformerFor(
+			GameServer.class,
 			10 * 60 * 1000L // 10 minute resync period
 		);
 
-		deploymentInformer.addEventHandler(new ResourceEventHandler<Deployment>() {
+		gameServerInformer.addEventHandler(new ResourceEventHandler<GameServer>() {
 			@Override
-			public void onAdd(Deployment deployment) {
-				if (shouldReconcile(deployment)) {
-					queue.enqueue(ReconcileRequest.forDeployment(deployment));
-				}
+			public void onAdd(GameServer gameServer) {
+				System.out.println("GameServer added: " + gameServer.getMetadata().getName());
+				queue.enqueue(ReconcileRequest.forGameServer(gameServer));
 			}
 
 			@Override
-			public void onUpdate(Deployment oldDeployment, Deployment newDeployment) {
-				if (shouldReconcile(newDeployment)) {
-					queue.enqueue(ReconcileRequest.forDeployment(newDeployment));
-				}
+			public void onUpdate(GameServer oldGameServer, GameServer newGameServer) {
+				System.out.println("GameServer updated: " + newGameServer.getMetadata().getName());
+				queue.enqueue(ReconcileRequest.forGameServer(newGameServer));
 			}
 
 			@Override
-			public void onDelete(Deployment deployment, boolean deletedFinalStateUnknown) {
-				// Optional: cleanup logic if needed
+			public void onDelete(GameServer gameServer, boolean deletedFinalStateUnknown) {
+				System.out.println("GameServer deleted: " + gameServer.getMetadata().getName());
+				// Pods will be garbage collected via owner references
+				// Optionally cleanup any in-memory state here
 			}
 		});
 
-		// Setup StatefulSet informer
-		SharedIndexInformer<StatefulSet> statefulSetInformer = informerFactory.sharedIndexInformerFor(
-			StatefulSet.class,
-			10 * 60 * 1000L // 10 minute resync period
-		);
-
-		statefulSetInformer.addEventHandler(new ResourceEventHandler<StatefulSet>() {
-			@Override
-			public void onAdd(StatefulSet statefulSet) {
-				if (shouldReconcile(statefulSet)) {
-					queue.enqueue(ReconcileRequest.forStatefulSet(statefulSet));
-				}
-			}
-
-			@Override
-			public void onUpdate(StatefulSet oldStatefulSet, StatefulSet newStatefulSet) {
-				if (shouldReconcile(newStatefulSet)) {
-					queue.enqueue(ReconcileRequest.forStatefulSet(newStatefulSet));
-				}
-			}
-
-			@Override
-			public void onDelete(StatefulSet statefulSet, boolean deletedFinalStateUnknown) {
-				// Optional: cleanup logic if needed
-			}
-		});
-
-		System.out.println("Informers configured for Deployments and StatefulSets");
-	}
-
-	private boolean shouldReconcile(HasMetadata resource) {
-		// Check deployment/statefulset metadata labels first
-		Map<String, String> labels = resource.getMetadata().getLabels();
-		if (labels != null) {
-			String serverDiscovery = labels.get(DeploymentLabel.SERVER_DISCOVERY.getLabel());
-			if ("true".equals(serverDiscovery)) {
-				return true;
-			}
-		}
-
-		// Also check spec.template.metadata.labels (pod template labels)
-		Map<String, String> templateLabels = null;
-		if (resource instanceof Deployment deployment) {
-			templateLabels = deployment.getSpec().getTemplate().getMetadata().getLabels();
-		} else if (resource instanceof StatefulSet statefulSet) {
-			templateLabels = statefulSet.getSpec().getTemplate().getMetadata().getLabels();
-		}
-
-		if (templateLabels != null) {
-			String serverDiscovery = templateLabels.get(DeploymentLabel.SERVER_DISCOVERY.getLabel());
-			return "true".equals(serverDiscovery);
-		}
-
-		return false;
+		System.out.println("Informers configured for GameServer CRDs");
 	}
 
 	public void start() {
@@ -123,8 +65,7 @@ public class InformerManager {
 		System.out.println("Waiting for informers to sync...");
 		int maxWaitSeconds = 30;
 		int waitedSeconds = 0;
-		while (!informerFactory.getExistingSharedIndexInformer(Deployment.class).hasSynced() &&
-			   waitedSeconds < maxWaitSeconds) {
+		while (!gameServerInformer.hasSynced() && waitedSeconds < maxWaitSeconds) {
 			try {
 				Thread.sleep(1000);
 				waitedSeconds++;

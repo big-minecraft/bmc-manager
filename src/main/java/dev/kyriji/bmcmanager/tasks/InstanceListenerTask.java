@@ -2,10 +2,10 @@ package dev.kyriji.bmcmanager.tasks;
 
 import com.google.gson.Gson;
 import dev.kyriji.bmcmanager.BMCManager;
-import dev.kyriji.bmcmanager.controllers.DeploymentManager;
+import dev.kyriji.bmcmanager.controllers.GameServerManager;
 import dev.kyriji.bmcmanager.controllers.QueueManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
-import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
+import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import dev.kyriji.bmcmanager.objects.Game;
 import dev.kyriji.bigminecraftapi.enums.InstanceState;
 import dev.kyriji.bigminecraftapi.enums.RedisChannel;
@@ -20,7 +20,7 @@ public class InstanceListenerTask {
 	Gson gson = new Gson();
 
 	public InstanceListenerTask() {
-		DeploymentManager deploymentManager = BMCManager.deploymentManager;
+		GameServerManager gameServerManager = BMCManager.gameServerManager;
 
 		new Thread(() -> RedisManager.get().subscribe(new JedisPubSub() {
 			@Override
@@ -32,8 +32,8 @@ public class InstanceListenerTask {
 
 				Instance instance = BMCManager.instanceManager.getFromIP(instanceIP);
 				if(instance == null) return;
-				DeploymentWrapper<? extends Instance> deployment = deploymentManager.getDeployment(instance.getDeployment());
-				if(deployment == null) return;
+				GameServerWrapper<? extends Instance> gameServer = gameServerManager.getGameServer(instance.getDeployment());
+				if(gameServer == null) return;
 
 				InstanceState state = InstanceState.valueOf(stateString);
 				instance.setState(state);
@@ -46,14 +46,14 @@ public class InstanceListenerTask {
 				}
 
 				RedisManager.get().updateInstance(instance);
-				deployment.fetchInstances();
+				gameServer.fetchInstances();
 			}
 		}, RedisChannel.INSTANCE_STATE_CHANGE.getRef())).start();
 
 		new Thread(() -> RedisManager.get().subscribe(new JedisPubSub() {
 			@Override
 			public void onMessage(String channel, String message) {
-				List<Game> games = deploymentManager.getGames();
+				List<Game> games = gameServerManager.getGames();
 				List<Game> initialGames = games.stream()
 						.filter(game -> game.isInitial() && !game.getInstances().isEmpty())
 						.toList();
@@ -76,7 +76,7 @@ public class InstanceListenerTask {
 				UUID playerId = UUID.fromString(parts[0]);
 				String deploymentString = parts[1];
 
-				Game game = deploymentManager.getGame(deploymentString);
+				Game game = gameServerManager.getGame(deploymentString);
 				if(game == null) {
 					//Used to send back an error to the proxy
 					QueueManager.sendPlayerToInstance(playerId, null);
@@ -107,29 +107,8 @@ public class InstanceListenerTask {
 
 	private void turnOffPod(MinecraftInstance instance) {
 		try {
-			// CRITICAL: Decrement deployment replicas BEFORE deleting pod
-			// When a server self-terminates (e.g., BLOCKED server shuts down after player leaves),
-			// we need to update the replica count to prevent Kubernetes from creating a replacement pod
-			String deploymentName = instance.getDeployment();
-			var deployment = BMCManager.kubernetesClient.apps().deployments()
-				.inNamespace("default")
-				.withName(deploymentName)
-				.get();
-
-			if (deployment != null) {
-				int currentReplicas = deployment.getSpec().getReplicas();
-				if (currentReplicas > 0) {
-					int newReplicas = currentReplicas - 1;
-					deployment.getSpec().setReplicas(newReplicas);
-					BMCManager.kubernetesClient.apps().deployments()
-						.inNamespace("default")
-						.resource(deployment)
-						.update();
-					System.out.println("Decremented " + deploymentName + " replicas: " + currentReplicas + " -> " + newReplicas);
-				}
-			}
-
-			// Now delete the pod - Kubernetes won't recreate it since replicas was decremented
+			// With direct pod ownership (no Deployments), we just delete the pod directly
+			// No need to decrement replica counts since we own pods directly via GameServer CRD
 			BMCManager.kubernetesClient.pods()
 				.inNamespace("default")
 				.withName(instance.getPodName())

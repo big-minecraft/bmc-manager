@@ -1,17 +1,18 @@
 package dev.kyriji.bmcmanager.objects;
 
-import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
-import io.fabric8.kubernetes.api.model.apps.Deployment;
+import dev.kyriji.bmcmanager.crd.GameServer;
+import dev.kyriji.bmcmanager.crd.GameServerSpec;
 
-public class Game extends DeploymentWrapper<MinecraftInstance> {
+public class Game extends GameServerWrapper<MinecraftInstance> {
 	private final boolean isInitial;
 
-	public Game(BMCDeployment deployment) {
-		super(deployment);
+	public Game(GameServer gameServer) {
+		super(gameServer);
 
-		this.isInitial = Boolean.parseBoolean(deployment.getSpec().getTemplate().getMetadata().getLabels()
-				.get(DeploymentLabel.INITIAL_SERVER.getLabel()));
+		// Read initialServer from CRD spec.queuing
+		GameServerSpec.QueuingSpec queuing = gameServer.getSpec().getQueuing();
+		this.isInitial = queuing != null && Boolean.TRUE.equals(queuing.getRequireStartupConfirmation());
 	}
 
 	public boolean isInitial() {

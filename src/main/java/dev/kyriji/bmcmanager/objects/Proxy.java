@@ -1,13 +1,12 @@
 package dev.kyriji.bmcmanager.objects;
 
-import dev.kyriji.bmcmanager.interfaces.Scalable;
-import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
-import io.fabric8.kubernetes.api.model.apps.Deployment;
+import dev.kyriji.bmcmanager.crd.GameServer;
+import dev.kyriji.bmcmanager.interfaces.Scalable;
 
-public class Proxy extends DeploymentWrapper<MinecraftInstance> implements Scalable {
+public class Proxy extends GameServerWrapper<MinecraftInstance> implements Scalable {
 
-	public Proxy(BMCDeployment deployment) {
-		super(deployment);
+	public Proxy(GameServer gameServer) {
+		super(gameServer);
 	}
 }

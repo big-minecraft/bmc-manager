@@ -1,9 +1,8 @@
 package dev.kyriji.bmcmanager.objects;
 
-import dev.kyriji.bmcmanager.enums.DeploymentLabel;
+import dev.kyriji.bmcmanager.crd.GameServerSpec;
 import dev.kyriji.bmcmanager.enums.ScaleStrategy;
 
-import java.util.Map;
 import java.util.Objects;
 
 public class ScalingSettings {
@@ -22,24 +21,36 @@ public class ScalingSettings {
 	public int scaleUpLimit;
 	public int scaleDownLimit;
 
-	public ScalingSettings(Map<String, String> labels) {
-		this.strategy = ScaleStrategy.getStrategy(labels.get(DeploymentLabel.SCALE_STRATEGY.getLabel()));
+	public ScalingSettings(GameServerSpec.ScalingSpec scalingSpec) {
+		if (scalingSpec == null) {
+			// Default values for non-scaling deployments
+			this.strategy = ScaleStrategy.THRESHOLD;
+			this.maxPlayers = 100;
+			this.minInstances = 1;
+			this.maxInstances = 1;
+			this.scaleUpThreshold = 80;
+			this.scaleDownThreshold = 20;
+			this.scaleUpCooldown = 60;
+			this.scaleDownCooldown = 60;
+			this.scaleUpLimit = 1;
+			this.scaleDownLimit = 1;
+			return;
+		}
 
-		this.maxPlayers = Integer.parseInt(labels.get(DeploymentLabel.MAX_PLAYERS.getLabel()));
-		this.minInstances = Integer.parseInt(labels.get(DeploymentLabel.MIN_INSTANCES.getLabel()));
+		this.strategy = ScaleStrategy.getStrategy(scalingSpec.getStrategy());
 
-		String maxInstancesString = labels.get(DeploymentLabel.MAX_INSTANCES.getLabel());
-		if(maxInstancesString.equalsIgnoreCase("unlimited")) this.maxInstances = Integer.MAX_VALUE;
-		else this.maxInstances = Integer.parseInt(labels.get(DeploymentLabel.MAX_INSTANCES.getLabel()));
+		this.maxPlayers = scalingSpec.getMaxPlayers() != null ? scalingSpec.getMaxPlayers() : 100;
+		this.minInstances = scalingSpec.getMinInstances() != null ? scalingSpec.getMinInstances() : 1;
+		this.maxInstances = scalingSpec.getMaxInstances() != null ? scalingSpec.getMaxInstances() : Integer.MAX_VALUE;
 
-		this.scaleUpThreshold = Double.parseDouble(labels.get(DeploymentLabel.SCALE_UP_THRESHOLD.getLabel()));
-		this.scaleDownThreshold = Double.parseDouble(labels.get(DeploymentLabel.SCALE_DOWN_THRESHOLD.getLabel()));
+		this.scaleUpThreshold = scalingSpec.getScaleUpThreshold() != null ? scalingSpec.getScaleUpThreshold() : 80;
+		this.scaleDownThreshold = scalingSpec.getScaleDownThreshold() != null ? scalingSpec.getScaleDownThreshold() : 20;
 
-		this.scaleUpCooldown = Double.parseDouble(labels.get(DeploymentLabel.SCALE_UP_COOLDOWN.getLabel()));
-		this.scaleDownCooldown = Double.parseDouble(labels.get(DeploymentLabel.SCALE_DOWN_COOLDOWN.getLabel()));
+		this.scaleUpCooldown = scalingSpec.getScaleUpCooldown() != null ? scalingSpec.getScaleUpCooldown() : 60;
+		this.scaleDownCooldown = scalingSpec.getScaleDownCooldown() != null ? scalingSpec.getScaleDownCooldown() : 60;
 
-		this.scaleUpLimit = Integer.parseInt(labels.get(DeploymentLabel.SCALE_UP_LIMIT.getLabel()));
-		this.scaleDownLimit = Integer.parseInt(labels.get(DeploymentLabel.SCALE_DOWN_LIMIT.getLabel()));
+		this.scaleUpLimit = scalingSpec.getScaleUpLimit() != null ? scalingSpec.getScaleUpLimit() : 1;
+		this.scaleDownLimit = scalingSpec.getScaleDownLimit() != null ? scalingSpec.getScaleDownLimit() : 1;
 	}
 
 	@Override

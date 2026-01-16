@@ -1,16 +1,11 @@
 package dev.kyriji.bmcmanager.objects;
 
-import com.google.gson.Gson;
 import dev.kyriji.bigminecraftapi.objects.Instance;
-import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
-import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
-import dev.kyriji.bmcmanager.enums.DeploymentLabel;
+import dev.kyriji.bmcmanager.crd.GameServer;
+import dev.kyriji.bmcmanager.crd.GameServerSpec;
 import dev.kyriji.bmcmanager.enums.QueueStrategy;
-import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.interfaces.Scalable;
-
-import io.fabric8.kubernetes.api.model.apps.Deployment;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -19,9 +14,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class DeploymentWrapper<T extends Instance> implements Scalable {
+public abstract class GameServerWrapper<T extends Instance> implements Scalable {
 
-	protected BMCDeployment deployment;
+	protected GameServer gameServer;
 	protected List<T> instances;
 	private final String name;
 
@@ -31,20 +26,20 @@ public abstract class DeploymentWrapper<T extends Instance> implements Scalable 
 	private long lastScaleUp = 0;
 	private long lastScaleDown = 0;
 
-	private final Gson gson;
-
-	public DeploymentWrapper(BMCDeployment deployment) {
-		this.deployment = deployment;
+	public GameServerWrapper(GameServer gameServer) {
+		this.gameServer = gameServer;
 		this.instances = new ArrayList<>();
 
-		this.name = deployment.getMetadata().getName();
+		this.name = gameServer.getMetadata().getName();
 
-		this.queueStrategy = QueueStrategy.getStrategy(deployment.getSpec().getTemplate().getMetadata().getLabels()
-				.get(DeploymentLabel.QUEUE_STRATEGY.getLabel()));
+		// Read queue strategy from CRD spec
+		GameServerSpec.QueuingSpec queuing = gameServer.getSpec().getQueuing();
+		this.queueStrategy = queuing != null
+				? QueueStrategy.getStrategy(queuing.getQueueStrategy())
+				: QueueStrategy.FILL;
 
-		this.scalingSettings = new ScalingSettings(deployment.getSpec().getTemplate().getMetadata().getLabels());
-
-		this.gson = new Gson();
+		// Read scaling settings from CRD spec
+		this.scalingSettings = new ScalingSettings(gameServer.getSpec().getScaling());
 	}
 
 	public Type getInstanceType() {
@@ -66,10 +61,22 @@ public abstract class DeploymentWrapper<T extends Instance> implements Scalable 
 		return new ArrayList<>(instances);
 	}
 
+	public GameServer getGameServer() {
+		return gameServer;
+	}
+
+	public void setGameServer(GameServer gameServer) {
+		this.gameServer = gameServer;
+	}
+
+	public String getDeploymentType() {
+		return gameServer.getSpec().getDeploymentType();
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
-		if (!(o instanceof DeploymentWrapper<?> wrapper)) return false;
+		if (!(o instanceof GameServerWrapper<?> wrapper)) return false;
 		return Objects.equals(getName(), wrapper.getName());
 	}
 

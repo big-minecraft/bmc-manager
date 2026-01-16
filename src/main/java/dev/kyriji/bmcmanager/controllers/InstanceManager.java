@@ -36,7 +36,7 @@ public class InstanceManager {
 
 	public List<Instance> getInstances() {
 		List<Instance> instances = new ArrayList<>();
-		BMCManager.deploymentManager.getDeployments().forEach(game -> instances.addAll(game.getInstances()));
+		BMCManager.gameServerManager.getGameServers().forEach(gameServer -> instances.addAll(gameServer.getInstances()));
 		return instances;
 	}
 

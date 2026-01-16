@@ -10,11 +10,11 @@ import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import java.util.Map;
 
 public class BMCManager {
-	public static DeploymentManager deploymentManager;
+	public static GameServerManager gameServerManager;
 	public static InstanceDiscoveryTask serverDiscovery;
 	public static InstanceManager instanceManager;
 	public static PlayerListenerTask playerListener;
-	public static DeploymentDiscoveryTask gameDiscovery;
+	public static GameServerDiscoveryTask gameServerDiscovery;
 	public static InstanceListenerTask instanceListener;
 	public static InformerManager informerManager;
 	public static KubernetesClient kubernetesClient;
@@ -28,21 +28,21 @@ public class BMCManager {
 		// Initialize Kubernetes client
 		kubernetesClient = new KubernetesClientBuilder().build();
 
-		// Initialize existing managers
-		deploymentManager = new DeploymentManager();
+		// Initialize managers
+		gameServerManager = new GameServerManager();
 		instanceManager = new InstanceManager();
 
-		// NEW: Setup event-driven controller with informers
-		System.out.println("Setting up event-driven controller...");
+		// Setup event-driven controller with informers for GameServer CRDs
+		System.out.println("Setting up event-driven controller for GameServer CRDs...");
 		ReconciliationQueue queue = new ReconciliationQueue();
 		informerManager = new InformerManager(kubernetesClient, queue);
 		informerManager.setupInformers();
 		informerManager.start();
 
-		// Keep existing tasks
+		// Initialize tasks
 		serverDiscovery = new InstanceDiscoveryTask(instanceManager);
 		playerListener = new PlayerListenerTask();
-		gameDiscovery = new DeploymentDiscoveryTask();
+		gameServerDiscovery = new GameServerDiscoveryTask();
 		instanceListener = new InstanceListenerTask();
 
 		System.out.println("=== BMC Manager started successfully ===");
@@ -55,7 +55,7 @@ public class BMCManager {
 
 	public static int getRedisPort() {
 		Map<String, String> env = System.getenv();
-			String portStr = env.getOrDefault("REDIS_PORT", "6379");
+		String portStr = env.getOrDefault("REDIS_PORT", "6379");
 		return Integer.parseInt(portStr);
 	}
 }

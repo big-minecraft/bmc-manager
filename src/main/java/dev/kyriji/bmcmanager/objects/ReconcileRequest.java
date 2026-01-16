@@ -1,7 +1,7 @@
 package dev.kyriji.bmcmanager.objects;
 
+import dev.kyriji.bmcmanager.crd.GameServer;
 import dev.kyriji.bmcmanager.enums.ResourceType;
-import io.fabric8.kubernetes.api.model.HasMetadata;
 
 import java.util.Objects;
 
@@ -18,19 +18,11 @@ public class ReconcileRequest {
 		this.timestamp = System.currentTimeMillis();
 	}
 
-	public static ReconcileRequest forDeployment(HasMetadata resource) {
+	public static ReconcileRequest forGameServer(GameServer gameServer) {
 		return new ReconcileRequest(
-			resource.getMetadata().getNamespace(),
-			resource.getMetadata().getName(),
-			ResourceType.DEPLOYMENT
-		);
-	}
-
-	public static ReconcileRequest forStatefulSet(HasMetadata resource) {
-		return new ReconcileRequest(
-			resource.getMetadata().getNamespace(),
-			resource.getMetadata().getName(),
-			ResourceType.STATEFULSET
+			gameServer.getMetadata().getNamespace(),
+			gameServer.getMetadata().getName(),
+			ResourceType.GAMESERVER
 		);
 	}
 

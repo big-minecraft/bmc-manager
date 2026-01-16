@@ -2,10 +2,9 @@ package dev.kyriji.bmcmanager.tasks;
 
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
-import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bmcmanager.factories.InstanceFactory;
 import dev.kyriji.bmcmanager.controllers.InstanceManager;
-import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
+import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -35,7 +34,9 @@ public class InstanceDiscoveryTask {
 	}
 
 	private void discoverInstances() {
-		List<Pod> podList = client.pods().withLabel(DeploymentLabel.SERVER_DISCOVERY.getLabel(), "true").list().getItems();
+		// Find all pods managed by bmc-manager (created by PodBuilder with this label)
+		List<Pod> podList = client.pods().withLabel("kyriji.dev/managed-by", "bmc-manager").list().getItems();
+		// Also include proxy pods (for backwards compatibility or standalone proxies)
 		List<Pod> proxyList = client.pods().withLabel("app", "proxy").list().getItems();
 
 		podList.addAll(proxyList);
@@ -60,7 +61,7 @@ public class InstanceDiscoveryTask {
 			instanceManager.unregisterInstance(deploymentName, uid);
 		});
 
-		BMCManager.deploymentManager.getDeployments().forEach(DeploymentWrapper::fetchInstances);
+		BMCManager.gameServerManager.getGameServers().forEach(GameServerWrapper::fetchInstances);
 
 		RedisManager.get().updateTimestamp();
 	}

@@ -5,7 +5,7 @@ import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.enums.ScaleStrategy;
-import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
+import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import dev.kyriji.bmcmanager.objects.ScalingDecision;
 import dev.kyriji.bmcmanager.objects.ScalingSettings;
 
@@ -19,24 +19,25 @@ public class ScalingLogic {
 	private static final boolean DEBUG_SCALING = true;
 	// ====================================
 
-	public ScalingDecision determineScalingAction(DeploymentWrapper<MinecraftInstance> deploymentWrapper) {
-		ScalingSettings settings = deploymentWrapper.getScalingSettings();
+	public ScalingDecision determineScalingAction(GameServerWrapper<MinecraftInstance> gameServerWrapper, int currentPodCount) {
+		ScalingSettings settings = gameServerWrapper.getScalingSettings();
 		ScaleStrategy strategy = settings.strategy;
 
 		if (DEBUG_SCALING) {
 			System.out.println("\n========== SCALING DECISION START ==========");
-			System.out.println("Deployment: " + deploymentWrapper.getName());
+			System.out.println("GameServer: " + gameServerWrapper.getName());
 			System.out.println("Strategy: " + strategy);
+			System.out.println("Current pod count from K8s: " + currentPodCount);
 		}
 
 		// Check what scaling action is needed
 		ScaleResult result = switch(strategy) {
-			case THRESHOLD -> checkToScaleThreshold(deploymentWrapper);
-			case TREND -> checkToScaleTrend(deploymentWrapper);
+			case THRESHOLD -> checkToScaleThreshold(gameServerWrapper);
+			case TREND -> checkToScaleTrend(gameServerWrapper);
 		};
 
-		int totalInstances = getTotalNonTerminatingInstanceCount(deploymentWrapper);
-		int activeInstances = getActiveInstanceCount(deploymentWrapper);
+		int totalInstances = getTotalNonTerminatingInstanceCount(gameServerWrapper);
+		int activeInstances = getActiveInstanceCount(gameServerWrapper);
 
 		if (DEBUG_SCALING) {
 			System.out.println("Total instances: " + totalInstances);
@@ -45,25 +46,25 @@ public class ScalingLogic {
 		}
 
 		// Check constraints (min/max instances and cooldowns)
-		if(result == ScaleResult.UP && (totalInstances >= settings.maxInstances || deploymentWrapper.isOnScaleUpCooldown())) {
+		if(result == ScaleResult.UP && (totalInstances >= settings.maxInstances || gameServerWrapper.isOnScaleUpCooldown())) {
 			if (DEBUG_SCALING) {
 				System.out.println("Scale-up BLOCKED:");
 				if (totalInstances >= settings.maxInstances) {
 					System.out.println("  - At max instances (" + totalInstances + " >= " + settings.maxInstances + ")");
 				}
-				if (deploymentWrapper.isOnScaleUpCooldown()) {
+				if (gameServerWrapper.isOnScaleUpCooldown()) {
 					System.out.println("  - On scale-up cooldown");
 				}
 				System.out.println("========== SCALING DECISION END (NO CHANGE) ==========\n");
 			}
 			return ScalingDecision.noChange(totalInstances);
-		} else if(result == ScaleResult.DOWN && (activeInstances <= settings.minInstances || deploymentWrapper.isOnScaleDownCooldown())) {
+		} else if(result == ScaleResult.DOWN && (activeInstances <= settings.minInstances || gameServerWrapper.isOnScaleDownCooldown())) {
 			if (DEBUG_SCALING) {
 				System.out.println("Scale-down BLOCKED:");
 				if (activeInstances <= settings.minInstances) {
 					System.out.println("  - At min active instances (" + activeInstances + " <= " + settings.minInstances + ")");
 				}
-				if (deploymentWrapper.isOnScaleDownCooldown()) {
+				if (gameServerWrapper.isOnScaleDownCooldown()) {
 					System.out.println("  - On scale-down cooldown");
 				}
 				System.out.println("========== SCALING DECISION END (NO CHANGE) ==========\n");
@@ -81,7 +82,7 @@ public class ScalingLogic {
 		}
 
 		// Calculate target replicas
-		int targetReplicas = calculateTargetReplicas(deploymentWrapper, result);
+		int targetReplicas = calculateTargetReplicas(gameServerWrapper, result);
 
 		// If target equals current, no change needed
 		if(targetReplicas == totalInstances) {
@@ -98,7 +99,7 @@ public class ScalingLogic {
 			if (DEBUG_SCALING) {
 				System.out.println("Scaling DOWN: " + totalInstances + " -> " + targetReplicas + " (removing " + podsToRemove + " instances)");
 			}
-			List<MinecraftInstance> podsToDelete = selectPodsForScaleDown(deploymentWrapper.getInstances(), podsToRemove);
+			List<MinecraftInstance> podsToDelete = selectPodsForScaleDown(gameServerWrapper.getInstances(), podsToRemove);
 			if (DEBUG_SCALING) {
 				System.out.println("========== SCALING DECISION END (SCALE DOWN) ==========\n");
 			}
@@ -114,11 +115,11 @@ public class ScalingLogic {
 		}
 	}
 
-	private ScaleResult checkToScaleThreshold(DeploymentWrapper<MinecraftInstance> deploymentWrapper) {
-		int totalInstances = getTotalNonTerminatingInstanceCount(deploymentWrapper);
-		int activeInstances = getActiveInstanceCount(deploymentWrapper);
-		int playerCount = getPlayerCount(deploymentWrapper);
-		ScalingSettings settings = deploymentWrapper.getScalingSettings();
+	private ScaleResult checkToScaleThreshold(GameServerWrapper<MinecraftInstance> gameServerWrapper) {
+		int totalInstances = getTotalNonTerminatingInstanceCount(gameServerWrapper);
+		int activeInstances = getActiveInstanceCount(gameServerWrapper);
+		int playerCount = getPlayerCount(gameServerWrapper);
+		ScalingSettings settings = gameServerWrapper.getScalingSettings();
 
 		if (DEBUG_SCALING) {
 			System.out.println("\n--- Threshold Check ---");
@@ -174,17 +175,17 @@ public class ScalingLogic {
 		return ScaleResult.NO_CHANGE;
 	}
 
-	private ScaleResult checkToScaleTrend(DeploymentWrapper<MinecraftInstance> deploymentWrapper) {
+	private ScaleResult checkToScaleTrend(GameServerWrapper<MinecraftInstance> gameServerWrapper) {
 		// Trend-based scaling not yet implemented
 		return ScaleResult.NO_CHANGE;
 	}
 
-	private int calculateTargetReplicas(DeploymentWrapper<MinecraftInstance> deploymentWrapper, ScaleResult result) {
-		int activeCurrentInstances = getActiveInstanceCount(deploymentWrapper);
-		int playerCount = getPlayerCount(deploymentWrapper);
+	private int calculateTargetReplicas(GameServerWrapper<MinecraftInstance> gameServerWrapper, ScaleResult result) {
+		int activeCurrentInstances = getActiveInstanceCount(gameServerWrapper);
+		int playerCount = getPlayerCount(gameServerWrapper);
 		int instancesToAdd = 0;
 
-		ScalingSettings settings = deploymentWrapper.getScalingSettings();
+		ScalingSettings settings = gameServerWrapper.getScalingSettings();
 
 		if (DEBUG_SCALING) {
 			System.out.println("\n--- Calculating Target Replicas ---");
@@ -258,7 +259,7 @@ public class ScalingLogic {
 		// Calculate target replicas = total non-terminating instances + instances to add/remove
 		// instancesToAdd is based on ACTIVE (RUNNING+STARTING) instances, but we add to total count
 		// This ensures we account for BLOCKED/STARTING instances (but NOT STOPPING/STOPPED)
-		int targetReplicas = getTotalNonTerminatingInstanceCount(deploymentWrapper) + instancesToAdd;
+		int targetReplicas = getTotalNonTerminatingInstanceCount(gameServerWrapper) + instancesToAdd;
 
 		if (DEBUG_SCALING) {
 			System.out.println("Target replicas: " + targetReplicas);
@@ -301,26 +302,26 @@ public class ScalingLogic {
 		return new ArrayList<>(candidates.subList(0, toRemove));
 	}
 
-	private int getPlayerCount(DeploymentWrapper<MinecraftInstance> deploymentWrapper) {
-		List<MinecraftInstance> instances = deploymentWrapper.getInstances();
+	private int getPlayerCount(GameServerWrapper<MinecraftInstance> gameServerWrapper) {
+		List<MinecraftInstance> instances = gameServerWrapper.getInstances();
 		return instances.stream().mapToInt(instance -> instance.getPlayers().size()).sum();
 	}
 
-	private int getActiveInstanceCount(DeploymentWrapper<? extends Instance> deploymentWrapper) {
+	private int getActiveInstanceCount(GameServerWrapper<? extends Instance> gameServerWrapper) {
 		// Count RUNNING and STARTING instances as "active" for minimum instance checks
 		// STARTING instances are provisioned capacity that will soon be RUNNING
 		// BLOCKED, STOPPING, and STOPPED instances don't count
-		return (int) deploymentWrapper.getInstances().stream()
+		return (int) gameServerWrapper.getInstances().stream()
 			.filter(instance ->
 				instance.getState() == InstanceState.RUNNING ||
 				instance.getState() == InstanceState.STARTING)
 			.count();
 	}
 
-	private int getTotalNonTerminatingInstanceCount(DeploymentWrapper<? extends Instance> deploymentWrapper) {
+	private int getTotalNonTerminatingInstanceCount(GameServerWrapper<? extends Instance> gameServerWrapper) {
 		// Count all instances EXCEPT those that are shutting down (STOPPING/STOPPED)
-		// This gives us the "real" total that should match the deployment replica count
-		return (int) deploymentWrapper.getInstances().stream()
+		// This gives us the "real" total that should match the pod count
+		return (int) gameServerWrapper.getInstances().stream()
 			.filter(instance ->
 				instance.getState() != InstanceState.STOPPING &&
 				instance.getState() != InstanceState.STOPPED)

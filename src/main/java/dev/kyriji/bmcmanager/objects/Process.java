@@ -1,12 +1,10 @@
 package dev.kyriji.bmcmanager.objects;
 
-import dev.kyriji.bmcmanager.enums.DeploymentLabel;
 import dev.kyriji.bigminecraftapi.objects.Instance;
-import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
-import io.fabric8.kubernetes.api.model.apps.Deployment;
+import dev.kyriji.bmcmanager.crd.GameServer;
 
-public class Process extends DeploymentWrapper<Instance> {
-	public Process(BMCDeployment deployment) {
-		super(deployment);
+public class Process extends GameServerWrapper<Instance> {
+	public Process(GameServer gameServer) {
+		super(gameServer);
 	}
 }

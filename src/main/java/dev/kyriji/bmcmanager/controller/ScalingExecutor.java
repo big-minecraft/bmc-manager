@@ -3,48 +3,60 @@ package dev.kyriji.bmcmanager.controller;
 import dev.kyriji.bigminecraftapi.enums.InstanceState;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
+import dev.kyriji.bmcmanager.crd.GameServer;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
-import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
+import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import dev.kyriji.bmcmanager.objects.ScalingDecision;
-import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.apps.Deployment;
-import io.fabric8.kubernetes.api.model.apps.StatefulSet;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 public class ScalingExecutor {
 	private final KubernetesClient client;
+	private final PodBuilder podBuilder;
 
 	public ScalingExecutor(KubernetesClient client) {
 		this.client = client;
+		this.podBuilder = new PodBuilder();
 	}
 
-	public void executeScaling(ScalingDecision decision, HasMetadata resource, DeploymentWrapper<?> wrapper) {
+	public void executeScaling(ScalingDecision decision, GameServer gameServer, GameServerWrapper<?> wrapper) {
 		if (decision.getAction() == ScaleResult.NO_CHANGE) {
 			return;
 		}
 
-		String namespace = resource.getMetadata().getNamespace();
-		String name = resource.getMetadata().getName();
+		String namespace = gameServer.getMetadata().getNamespace();
 
 		if (decision.getAction() == ScaleResult.UP) {
-			scaleUp(decision, resource, namespace, name, wrapper);
+			scaleUp(decision, gameServer, namespace, wrapper);
 		} else if (decision.getAction() == ScaleResult.DOWN) {
-			scaleDown(decision, resource, namespace, name, wrapper);
+			scaleDown(decision, namespace, wrapper);
 		}
 	}
 
-	private void scaleUp(ScalingDecision decision, HasMetadata resource, String namespace, String name, DeploymentWrapper<?> wrapper) {
-		// For scale-up, simply update the replica count
-		// Kubernetes will automatically create new pods
-		updateReplicas(resource, namespace, name, decision.getTargetReplicas());
+	private void scaleUp(ScalingDecision decision, GameServer gameServer, String namespace, GameServerWrapper<?> wrapper) {
+		// Create pods directly - no Deployment replica manipulation needed
+		int podsToCreate = decision.getTargetReplicas() - decision.getCurrentReplicas();
+
+		for (int i = 0; i < podsToCreate; i++) {
+			try {
+				Pod pod = podBuilder.buildPod(gameServer);
+				client.pods()
+					.inNamespace(namespace)
+					.resource(pod)
+					.create();
+				System.out.println("Created pod: " + pod.getMetadata().getName() + " for GameServer: " + gameServer.getMetadata().getName());
+			} catch (Exception e) {
+				System.err.println("Failed to create pod for " + gameServer.getMetadata().getName() + ": " + e.getMessage());
+			}
+		}
 
 		// Update cooldown timestamp
 		wrapper.setLastScaleUp(System.currentTimeMillis());
 	}
 
-	private void scaleDown(ScalingDecision decision, HasMetadata resource, String namespace, String name, DeploymentWrapper<?> wrapper) {
-		// CRITICAL: We must manually delete specific pods to control WHICH instances are removed
-		// (e.g., those with fewest players). If we just update replicas, Kubernetes chooses randomly.
+	private void scaleDown(ScalingDecision decision, String namespace, GameServerWrapper<?> wrapper) {
+		// CRITICAL: We manually delete specific pods to control WHICH instances are removed
+		// (e.g., those with fewest players). This gives us absolute control.
 
 		// Step 1: Mark instances as STOPPING in Redis (prevents new players from joining)
 		for (Instance instance : decision.getPodsToDelete()) {
@@ -52,8 +64,7 @@ public class ScalingExecutor {
 			RedisManager.get().updateInstance(instance);
 		}
 
-		// Step 2: Manually delete the specific pods we selected
-		// This ensures we remove instances with fewest players
+		// Step 2: Delete the specific pods we selected
 		for (Instance instance : decision.getPodsToDelete()) {
 			try {
 				client.pods()
@@ -66,30 +77,21 @@ public class ScalingExecutor {
 			}
 		}
 
-		// Step 3: Update replica count AFTER deleting pods
-		// This prevents Kubernetes from creating replacements for the pods we just deleted
-		updateReplicas(resource, namespace, name, decision.getTargetReplicas());
-
-		// Step 4: Update cooldown timestamp
+		// Step 3: Update cooldown timestamp
 		wrapper.setLastScaleDown(System.currentTimeMillis());
 	}
 
-	private void updateReplicas(HasMetadata resource, String namespace, String name, int replicas) {
-		if (resource instanceof Deployment deployment) {
-			deployment.getSpec().setReplicas(replicas);
-			client.apps().deployments()
-				.inNamespace(namespace)
-				.resource(deployment)
-				.update();
+	public int getCurrentPodCount(GameServer gameServer) {
+		try {
+			return client.pods()
+				.inNamespace(gameServer.getMetadata().getNamespace())
+				.withLabel("app", gameServer.getMetadata().getName())
+				.list()
+				.getItems()
+				.size();
+		} catch (Exception e) {
+			System.err.println("Failed to count pods for " + gameServer.getMetadata().getName() + ": " + e.getMessage());
+			return 0;
 		}
-		// StatefulSet scaling removed - only Deployments are scaled
-	}
-
-	public int getCurrentReplicas(HasMetadata resource) {
-		if (resource instanceof Deployment deployment) {
-			return deployment.getSpec().getReplicas();
-		}
-		// StatefulSet scaling removed - only Deployments are scaled
-		return 0;
 	}
 }

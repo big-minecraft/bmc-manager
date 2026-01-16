@@ -5,9 +5,9 @@ import dev.kyriji.bigminecraftapi.enums.RedisChannel;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import dev.kyriji.bmcmanager.BMCManager;
-import dev.kyriji.bmcmanager.controllers.DeploymentManager;
+import dev.kyriji.bmcmanager.controllers.GameServerManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
-import dev.kyriji.bmcmanager.objects.DeploymentWrapper;
+import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import redis.clients.jedis.JedisPubSub;
 
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ public class PlayerListenerTask {
 				minecraftInstance.addPlayer(playerId, username);
 				RedisManager.get().updateInstance(minecraftInstance);
 
-				updateDeployment(minecraftInstance);
+				updateGameServer(minecraftInstance);
 			}
 		}, RedisChannel.PROXY_CONNECT.getRef())).start();
 
@@ -57,7 +57,7 @@ public class PlayerListenerTask {
 				RedisManager.get().updateInstance(minecraftInstance);
 
 				removePlayerFromInstance(playerId, true);
-				updateDeployment(minecraftInstance);
+				updateGameServer(minecraftInstance);
 			}
 		}, RedisChannel.PROXY_DISCONNECT.getRef())).start();
 
@@ -79,17 +79,19 @@ public class PlayerListenerTask {
 
 				server.addPlayer(playerId, name);
 				RedisManager.get().updateInstance(server);
-				updateDeployment(server);
+				updateGameServer(server);
 			}
 		}, RedisChannel.INSTANCE_SWITCH.getRef())).start();
 	}
 
 	public void removePlayerFromInstance(UUID player, boolean removeProxy) {
 		List<MinecraftInstance> instances = new ArrayList<>();
-		DeploymentManager manager = BMCManager.deploymentManager;
+		GameServerManager manager = BMCManager.gameServerManager;
 
 		manager.getGames().forEach(game -> instances.addAll(game.getInstances()));
-		if(removeProxy) instances.addAll(manager.getProxy().getInstances());
+		if(removeProxy && manager.getProxy() != null) {
+			instances.addAll(manager.getProxy().getInstances());
+		}
 
 		for(Instance instance : instances) {
 			if(!(instance instanceof MinecraftInstance minecraftInstance)) continue;
@@ -101,9 +103,9 @@ public class PlayerListenerTask {
 		}
 	}
 
-	public void updateDeployment(Instance instance) {
-		DeploymentManager deploymentManager = BMCManager.deploymentManager;
-		DeploymentWrapper<?> deployment = deploymentManager.getDeployment(instance.getDeployment());
-		if(deployment != null) deployment.fetchInstances();
+	public void updateGameServer(Instance instance) {
+		GameServerManager gameServerManager = BMCManager.gameServerManager;
+		GameServerWrapper<?> gameServer = gameServerManager.getGameServer(instance.getDeployment());
+		if(gameServer != null) gameServer.fetchInstances();
 	}
 }
