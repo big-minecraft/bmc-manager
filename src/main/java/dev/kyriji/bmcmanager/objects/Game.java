@@ -10,9 +10,8 @@ public class Game extends GameServerWrapper<MinecraftInstance> {
 	public Game(GameServer gameServer) {
 		super(gameServer);
 
-		// Read initialServer from CRD spec.queuing
 		GameServerSpec.QueuingSpec queuing = gameServer.getSpec().getQueuing();
-		this.isInitial = queuing != null && Boolean.TRUE.equals(queuing.getRequireStartupConfirmation());
+		this.isInitial = queuing != null && Boolean.TRUE.equals(queuing.getInitialServer());
 	}
 
 	public boolean isInitial() {

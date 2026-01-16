@@ -292,15 +292,15 @@ public class GameServerSpec {
 	}
 
 	public static class QueuingSpec {
-		private String initialServer;
+		private Boolean initialServer;
 		private Boolean requireStartupConfirmation;
 		private String queueStrategy;
 
-		public String getInitialServer() {
+		public Boolean getInitialServer() {
 			return initialServer;
 		}
 
-		public void setInitialServer(String initialServer) {
+		public void setInitialServer(Boolean initialServer) {
 			this.initialServer = initialServer;
 		}
 
