@@ -91,16 +91,23 @@ public class RedisManager {
 
 	public void updateInstance(Instance instance) {
 		String key = "instance:" + instance.getUid() + ":" + instance.getDeployment();
-		hset(key, "uid", instance.getUid());
-		hset(key, "name", instance.getName());
-		hset(key, "podName", instance.getPodName());
-		hset(key, "ip", instance.getIp());
-		hset(key, "state", instance.getState().name());
-		hset(key, "deployment", instance.getDeployment());
 
-		if(instance instanceof MinecraftInstance minecraftInstance) {
-			hset(key, "players", new Gson().toJson(minecraftInstance.getPlayers()));
+		// Build all fields in a map first, then write atomically with hset(key, map)
+		// This prevents partial writes if an error occurs mid-update
+		Map<String, String> fields = new HashMap<>();
+		fields.put("uid", instance.getUid());
+		fields.put("name", instance.getName());
+		fields.put("podName", instance.getPodName());
+		fields.put("ip", instance.getIp());
+		fields.put("state", instance.getState() != null ? instance.getState().name() : InstanceState.STARTING.name());
+		fields.put("deployment", instance.getDeployment());
+
+		if (instance instanceof MinecraftInstance minecraftInstance) {
+			fields.put("players", new Gson().toJson(minecraftInstance.getPlayers()));
 		}
+
+		// Atomic write - all fields written in single Redis command
+		withRedis(jedis -> jedis.hset(key, fields));
 	}
 
 	public List<Instance> scanAndDeserializeInstances(String pattern) {
