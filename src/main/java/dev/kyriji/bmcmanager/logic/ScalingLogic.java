@@ -124,12 +124,20 @@ public class ScalingLogic {
 			return ScalingDecision.scaleDown(totalInstances, targetReplicas, podsToDelete);
 		} else {
 			// Scale up - no specific pods to select
-			int podsToAdd = targetReplicas - totalInstances;
+			// Use K8s pod count to avoid creating duplicates while waiting for Redis discovery
+			int podsToAdd = targetReplicas - Math.max(totalInstances, currentPodCount);
+			if (podsToAdd <= 0) {
+				if (DEBUG_SCALING) {
+					System.out.println("K8s already has " + currentPodCount + " pods (target: " + targetReplicas + "), no scale-up needed");
+					System.out.println("========== SCALING DECISION END (NO CHANGE - K8S AHEAD) ==========\n");
+				}
+				return ScalingDecision.noChange(currentPodCount);
+			}
 			if (DEBUG_SCALING) {
-				System.out.println("Scaling UP: " + totalInstances + " -> " + targetReplicas + " (adding " + podsToAdd + " instances)");
+				System.out.println("Scaling UP: " + currentPodCount + " -> " + targetReplicas + " (adding " + podsToAdd + " instances)");
 				System.out.println("========== SCALING DECISION END (SCALE UP) ==========\n");
 			}
-			return ScalingDecision.scaleUp(totalInstances, targetReplicas);
+			return ScalingDecision.scaleUp(currentPodCount, targetReplicas);
 		}
 	}
 
