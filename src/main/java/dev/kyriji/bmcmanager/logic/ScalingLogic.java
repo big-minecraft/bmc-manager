@@ -35,15 +35,15 @@ public class ScalingLogic {
 		}
 
 		// If K8s already has enough pods, don't create more even if Redis hasn't caught up
-		if (currentPodCount >= settings.minInstances) {
-			int activeInstances = getActiveInstanceCount(gameServerWrapper);
-			if (activeInstances == 0 && currentPodCount > 0) {
-				if (DEBUG_SCALING) {
-					System.out.println("K8s has " + currentPodCount + " pods but Redis shows 0 active - waiting for discovery");
-					System.out.println("========== SCALING DECISION END (NO CHANGE - WAITING) ==========\n");
-				}
-				return ScalingDecision.noChange(currentPodCount);
+		// Only wait if Redis shows NO instances at all (not yet discovered)
+		// If Redis has instances but they're BLOCKED, that's a real state that needs scaling
+		int totalInstancesInRedis = gameServerWrapper.getInstances().size();
+		if (currentPodCount >= settings.minInstances && totalInstancesInRedis == 0 && currentPodCount > 0) {
+			if (DEBUG_SCALING) {
+				System.out.println("K8s has " + currentPodCount + " pods but Redis shows 0 instances - waiting for discovery");
+				System.out.println("========== SCALING DECISION END (NO CHANGE - WAITING) ==========\n");
 			}
+			return ScalingDecision.noChange(currentPodCount);
 		}
 
 		// Check what scaling action is needed
