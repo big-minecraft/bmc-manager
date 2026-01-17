@@ -35,11 +35,15 @@ public class InstanceFactory {
 
 		// Determine initial state based on requireStartupConfirmation
 		InstanceState initialState = InstanceState.RUNNING;
+		System.out.println("Looking for wrapper of deployment: " + deployment);
 		GameServerWrapper<?> wrapper = BMCManager.gameServerManager.getGameServer(deployment);
 		if (wrapper != null) {
+			System.out.println("Found wrapper for deployment: " + deployment);
 			GameServerSpec.QueuingSpec queuing = wrapper.getGameServer().getSpec().getQueuing();
+			System.out.println("Startup confirmation required: " + (queuing != null ? queuing.getRequireStartupConfirmation() : "null"));
 			if (queuing != null && Boolean.TRUE.equals(queuing.getRequireStartupConfirmation())) {
 				initialState = InstanceState.STARTING;
+				System.out.println("Setting initial state to STARTING for instance: " + name);
 			}
 		}
 		instance.setState(initialState);
