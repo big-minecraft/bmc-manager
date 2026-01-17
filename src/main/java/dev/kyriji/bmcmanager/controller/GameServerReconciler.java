@@ -36,7 +36,13 @@ public class GameServerReconciler {
 				return ReconcileResult.requeueAfter(5000);
 			}
 
-			// 3. Only handle MinecraftInstance game servers for scaling
+			// 3. Skip if deployment is disabled
+			if (!wrapper.isEnabled()) {
+				// Still requeue to detect when it's re-enabled
+				return ReconcileResult.requeueAfter(5000);
+			}
+
+			// 4. Only handle MinecraftInstance game servers for scaling
 			Type instanceType = wrapper.getInstanceType();
 			if (!MinecraftInstance.class.equals(instanceType)) {
 				return ReconcileResult.noRequeue();
@@ -45,22 +51,22 @@ public class GameServerReconciler {
 			@SuppressWarnings("unchecked")
 			GameServerWrapper<MinecraftInstance> minecraftWrapper = (GameServerWrapper<MinecraftInstance>) wrapper;
 
-			// 4. Fetch latest instance data from Redis
+			// 5. Fetch latest instance data from Redis
 			minecraftWrapper.fetchInstances();
 
-			// 5. Get current pod count owned by this GameServer
+			// 6. Get current pod count owned by this GameServer
 			int currentPodCount = scalingExecutor.getCurrentPodCount(gameServer);
 
-			// 6. Determine scaling action
+			// 7. Determine scaling action
 			ScalingDecision decision = scalingLogic.determineScalingAction(minecraftWrapper, currentPodCount);
 
-			// 7. Execute scaling if needed
+			// 8. Execute scaling if needed
 			if (decision.getAction() != dev.kyriji.bmcmanager.enums.ScaleResult.NO_CHANGE) {
 				scalingExecutor.executeScaling(decision, gameServer, wrapper);
 				System.out.println("Scaled " + request.getName() + ": " + decision);
 			}
 
-			// 8. Always requeue after 5 seconds for periodic checks
+			// 9. Always requeue after 5 seconds for periodic checks
 			return ReconcileResult.requeueAfter(5000);
 
 		} catch (Exception e) {

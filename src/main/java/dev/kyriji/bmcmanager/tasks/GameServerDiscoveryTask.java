@@ -2,13 +2,10 @@ package dev.kyriji.bmcmanager.tasks;
 
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.GameServerManager;
-import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.crd.GameServer;
 import dev.kyriji.bmcmanager.objects.GameServerWrapper;
-import dev.kyriji.bigminecraftapi.enums.RedisChannel;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
-import redis.clients.jedis.JedisPubSub;
 
 import java.util.*;
 
@@ -18,17 +15,9 @@ public class GameServerDiscoveryTask {
 	public GameServerDiscoveryTask() {
 		this.client = new KubernetesClientBuilder().build();
 
+		// GameServer CRD changes are already watched by InformerManager
+		// Initial discovery runs after a short delay to ensure instances are registered
 		new Thread(() -> {
-			RedisManager.get().subscribe(new JedisPubSub() {
-				@Override
-				public void onMessage(String channel, String message) {
-					discoverGameServers();
-				}
-			}, RedisChannel.DEPLOYMENT_MODIFIED.getRef());
-		}).start();
-
-		new Thread(() -> {
-			// Sleep to ensure that ServerDiscoveryTask has had time to register all instances
 			try { Thread.sleep(5000); } catch (InterruptedException e) { throw new RuntimeException(e); }
 			discoverGameServers();
 		}).start();

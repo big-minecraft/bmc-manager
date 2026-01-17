@@ -8,16 +8,16 @@ version = ''
 
 repositories {
     mavenCentral()
+    mavenLocal()
 
     maven { url "https://jitpack.io" }
 }
 
 dependencies {
-    implementation files('libs/bmc-api-0.0.0.jar')
-
     implementation group: 'redis.clients', name: 'jedis', version: '5.2.0'
     implementation 'io.fabric8:kubernetes-client-api:6.13.4'
     implementation 'io.fabric8:kubernetes-client:6.13.4'
+    implementation 'dev.kyriji:bmc-api:0.0.0'
 
 }
 

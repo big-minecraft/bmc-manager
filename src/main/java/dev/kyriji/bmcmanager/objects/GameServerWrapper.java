@@ -25,6 +25,7 @@ public abstract class GameServerWrapper<T extends Instance> implements Scalable 
 
 	private long lastScaleUp = 0;
 	private long lastScaleDown = 0;
+	private boolean enabled = true;
 
 	public GameServerWrapper(GameServer gameServer) {
 		this.gameServer = gameServer;
@@ -112,5 +113,13 @@ public abstract class GameServerWrapper<T extends Instance> implements Scalable 
 	@Override
 	public void setLastScaleDown(long lastScaleDown) {
 		this.lastScaleDown = lastScaleDown;
+	}
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
 	}
 }

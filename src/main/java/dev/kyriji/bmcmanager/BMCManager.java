@@ -16,6 +16,7 @@ public class BMCManager {
 	public static PlayerListenerTask playerListener;
 	public static GameServerDiscoveryTask gameServerDiscovery;
 	public static InstanceListenerTask instanceListener;
+	public static DeploymentToggleListenerTask deploymentToggleListener;
 	public static InformerManager informerManager;
 	public static KubernetesClient kubernetesClient;
 
@@ -44,6 +45,7 @@ public class BMCManager {
 		playerListener = new PlayerListenerTask();
 		gameServerDiscovery = new GameServerDiscoveryTask();
 		instanceListener = new InstanceListenerTask();
+		deploymentToggleListener = new DeploymentToggleListenerTask();
 
 		System.out.println("=== BMC Manager started successfully ===");
 	}
