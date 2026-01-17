@@ -128,37 +128,53 @@ public class RedisManager {
 				cursor = scanResult.getCursor();
 
 				for(String key : scanResult.getResult()) {
-					String type = jedis.type(key);
-					if (!"hash".equals(type)) {
-						System.err.println("Skipping key '" + key + "' - expected hash but found: " + type);
-						continue;
+					try {
+						String type = jedis.type(key);
+						if (!"hash".equals(type)) {
+							System.err.println("Skipping key '" + key + "' - expected hash but found: " + type);
+							continue;
+						}
+
+						Map<String, String> hashData = jedis.hgetAll(key);
+						if (hashData == null || hashData.isEmpty()) {
+							System.err.println("Skipping key '" + key + "' - hash data is empty or null");
+							continue;
+						}
+
+						String uid = hashData.get("uid");
+						String name = hashData.get("name");
+						String podName = hashData.get("podName");
+						String ip = hashData.get("ip");
+						String deployment = hashData.get("deployment");
+						String stateStr = hashData.get("state");
+
+						InstanceState state = null;
+						if (stateStr != null) {
+							try {
+								state = InstanceState.valueOf(stateStr);
+							} catch (IllegalArgumentException e) {
+								System.err.println("Invalid state '" + stateStr + "' for key '" + key + "', defaulting to null");
+							}
+						}
+
+						Instance instance;
+						if(hashData.containsKey("players")) {
+							String playersStr = hashData.get("players");
+							Map<UUID, String> players = playersStr != null ?
+									gson.fromJson(playersStr, playerMapType) : new HashMap<>();
+
+							instance = new MinecraftInstance(uid, name, podName, ip, deployment);
+							((MinecraftInstance) instance).setPlayers(players);
+						} else {
+							instance = new Instance(uid, name, podName, ip, deployment);
+						}
+
+						instance.setState(state);
+						resultList.add(instance);
+					} catch (Exception e) {
+						System.err.println("Error deserializing instance from key '" + key + "': " + e.getMessage());
+						e.printStackTrace();
 					}
-
-					Map<String, String> hashData = jedis.hgetAll(key);
-
-					String uid = hashData.get("uid");
-					String name = hashData.get("name");
-					String podName = hashData.get("podName");
-					String ip = hashData.get("ip");
-					String deployment = hashData.get("deployment");
-					String stateStr = hashData.get("state");
-
-					InstanceState state = stateStr != null ? InstanceState.valueOf(stateStr) : null;
-
-					Instance instance;
-					if(hashData.containsKey("players")) {
-						String playersStr = hashData.get("players");
-						Map<UUID, String> players = playersStr != null ?
-								gson.fromJson(playersStr, playerMapType) : new HashMap<>();
-
-						instance = new MinecraftInstance(uid, name, podName, ip, deployment);
-						((MinecraftInstance) instance).setPlayers(players);
-					} else {
-						instance = new Instance(uid, name, podName, ip, deployment);
-					}
-
-					instance.setState(state);
-					resultList.add(instance);
 				}
 			} while (!cursor.equals("0"));
 		}

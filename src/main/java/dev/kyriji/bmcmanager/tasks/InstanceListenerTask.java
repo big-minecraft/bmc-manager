@@ -40,6 +40,7 @@ public class InstanceListenerTask {
 
 				// Delete pod when instance is stopping or stopped
 				if(state == InstanceState.STOPPING || state == InstanceState.STOPPED) {
+					System.out.println("Received " + state + " state for instance " + instance.getName() + " (" + instance.getPodName() + "), triggering pod deletion");
 					if(instance instanceof MinecraftInstance minecraftInstance) {
 						turnOffPod(minecraftInstance);
 					}

@@ -46,13 +46,15 @@ public class ScalingLogic {
 		}
 
 		// Check constraints (min/max instances and cooldowns)
-		if(result == ScaleResult.UP && (totalInstances >= settings.maxInstances || gameServerWrapper.isOnScaleUpCooldown())) {
+		// Bypass cooldown when below minimum instances - we need to recover ASAP
+		boolean belowMinimum = activeInstances < settings.minInstances;
+		if(result == ScaleResult.UP && (totalInstances >= settings.maxInstances || (!belowMinimum && gameServerWrapper.isOnScaleUpCooldown()))) {
 			if (DEBUG_SCALING) {
 				System.out.println("Scale-up BLOCKED:");
 				if (totalInstances >= settings.maxInstances) {
 					System.out.println("  - At max instances (" + totalInstances + " >= " + settings.maxInstances + ")");
 				}
-				if (gameServerWrapper.isOnScaleUpCooldown()) {
+				if (!belowMinimum && gameServerWrapper.isOnScaleUpCooldown()) {
 					System.out.println("  - On scale-up cooldown");
 				}
 				System.out.println("========== SCALING DECISION END (NO CHANGE) ==========\n");
@@ -197,15 +199,14 @@ public class ScalingLogic {
 
 			// Check if we're below minimum instances
 			if(activeCurrentInstances < settings.minInstances) {
-				// Add instances to reach minimum (respecting scaleUpLimit)
+				// Add instances to reach minimum (bypass scaleUpLimit - recovery is priority)
 				int needed = settings.minInstances - activeCurrentInstances;
-				instancesToAdd = Math.min(needed, scaleUpLimit);
+				instancesToAdd = needed;
 				if (DEBUG_SCALING) {
-					System.out.println("Scale-up calculation (below minimum):");
+					System.out.println("Scale-up calculation (below minimum - bypassing limits):");
 					System.out.println("  Current active: " + activeCurrentInstances);
 					System.out.println("  Minimum required: " + settings.minInstances);
-					System.out.println("  Need to add: " + needed);
-					System.out.println("  Actually adding: " + instancesToAdd + " (limited by scaleUpLimit: " + scaleUpLimit + ")");
+					System.out.println("  Adding: " + instancesToAdd + " (scaleUpLimit bypassed)");
 				}
 			} else {
 				// At or above minimum, use ratio-based scaling

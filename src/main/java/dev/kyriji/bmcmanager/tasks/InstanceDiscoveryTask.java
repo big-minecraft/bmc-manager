@@ -57,7 +57,9 @@ public class InstanceDiscoveryTask {
 		uidList.forEach((key, value) -> {
 			String deploymentName = value.getMetadata().getLabels().get("app");
 			String uid = value.getMetadata().getUid();
+			String podName = value.getMetadata().getName();
 
+			System.out.println("Pod no longer exists in K8s, unregistering: " + podName + " (uid=" + uid + ", deployment=" + deploymentName + ")");
 			instanceManager.unregisterInstance(deploymentName, uid);
 		});
 
