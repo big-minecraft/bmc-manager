@@ -52,10 +52,16 @@ public abstract class GameServerWrapper<T extends Instance> implements Scalable 
 	}
 
 	public void fetchInstances() {
+		int previousCount = this.instances.size();
 		this.instances.clear();
 
 		List<Instance> instances = RedisManager.get().scanAndDeserializeInstances("instance:*:" + name);
 		this.instances.addAll((Collection<? extends T>) instances);
+
+		// Log if instance count dropped unexpectedly (helps diagnose disappearing instances)
+		if (previousCount > 0 && this.instances.isEmpty()) {
+			System.err.println("WARNING: " + name + " went from " + previousCount + " instances to 0 after fetchInstances()!");
+		}
 	}
 
 	public String getName() {
