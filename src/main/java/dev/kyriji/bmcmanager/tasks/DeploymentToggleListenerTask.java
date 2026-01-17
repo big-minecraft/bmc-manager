@@ -1,6 +1,7 @@
 package dev.kyriji.bmcmanager.tasks;
 
 import dev.kyriji.bigminecraftapi.enums.InstanceState;
+import dev.kyriji.bigminecraftapi.enums.RedisChannel;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.GameServerManager;
@@ -9,8 +10,6 @@ import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import redis.clients.jedis.JedisPubSub;
 
 public class DeploymentToggleListenerTask {
-	private static final String DEPLOYMENT_RESTART_CHANNEL = "deployment-restart";
-
 	public DeploymentToggleListenerTask() {
 		GameServerManager gameServerManager = BMCManager.gameServerManager;
 
@@ -38,7 +37,7 @@ public class DeploymentToggleListenerTask {
 					e.printStackTrace();
 				}
 			}
-		}, DEPLOYMENT_RESTART_CHANNEL)).start();
+		}, RedisChannel.DEPLOYMENT_RESTART.getRef())).start();
 	}
 
 	private void deleteAllPods(GameServerWrapper<?> wrapper) {

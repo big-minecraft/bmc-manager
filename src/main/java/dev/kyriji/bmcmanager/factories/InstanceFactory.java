@@ -1,9 +1,12 @@
 package dev.kyriji.bmcmanager.factories;
 
 import dev.kyriji.bigminecraftapi.enums.InstanceState;
+import dev.kyriji.bmcmanager.BMCManager;
+import dev.kyriji.bmcmanager.crd.GameServerSpec;
 import dev.kyriji.bmcmanager.enums.DeploymentType;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
+import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import io.fabric8.kubernetes.api.model.Pod;
 
 public class InstanceFactory {
@@ -30,9 +33,16 @@ public class InstanceFactory {
 
 		System.out.println(name);
 
-		// Check for startup confirmation requirement
-		// New pods start in STARTING state by default, the server will update to RUNNING when ready
-		instance.setState(InstanceState.STARTING);
+		// Determine initial state based on requireStartupConfirmation
+		InstanceState initialState = InstanceState.RUNNING;
+		GameServerWrapper<?> wrapper = BMCManager.gameServerManager.getGameServer(deployment);
+		if (wrapper != null) {
+			GameServerSpec.QueuingSpec queuing = wrapper.getGameServer().getSpec().getQueuing();
+			if (queuing != null && Boolean.TRUE.equals(queuing.getRequireStartupConfirmation())) {
+				initialState = InstanceState.STARTING;
+			}
+		}
+		instance.setState(initialState);
 
 		return instance;
 	}
