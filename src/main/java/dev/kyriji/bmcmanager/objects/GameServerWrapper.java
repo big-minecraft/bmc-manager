@@ -41,6 +41,10 @@ public abstract class GameServerWrapper<T extends Instance> implements Scalable 
 
 		// Read scaling settings from CRD spec
 		this.scalingSettings = new ScalingSettings(gameServer.getSpec().getScaling());
+
+		// Read enabled state from Redis (default true if not set)
+		String enabledStr = RedisManager.get().hget("deployment:" + name, "enabled");
+		this.enabled = enabledStr == null || Boolean.parseBoolean(enabledStr);
 	}
 
 	public Type getInstanceType() {

@@ -1,7 +1,10 @@
 package dev.kyriji.bmcmanager.controller;
 
+import dev.kyriji.bigminecraftapi.enums.InstanceState;
+import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import dev.kyriji.bmcmanager.BMCManager;
+import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.crd.GameServer;
 import dev.kyriji.bmcmanager.logic.ScalingLogic;
 import dev.kyriji.bmcmanager.objects.*;
@@ -36,13 +39,25 @@ public class GameServerReconciler {
 				return ReconcileResult.requeueAfter(5000);
 			}
 
-			// 3. Skip if deployment is disabled
-			if (!wrapper.isEnabled()) {
-				// Still requeue to detect when it's re-enabled
+			// 3. Query Redis for current enabled state
+			String enabledStr = RedisManager.get().hget("deployment:" + request.getName(), "enabled");
+			boolean enabled = enabledStr == null || Boolean.parseBoolean(enabledStr);
+			boolean wasEnabled = wrapper.isEnabled();
+			wrapper.setEnabled(enabled);
+
+			// 4. If transitioning to disabled, delete all pods
+			if (wasEnabled && !enabled) {
+				System.out.println("Deployment " + request.getName() + " disabled, deleting all pods");
+				deleteAllPods(wrapper, gameServer.getMetadata().getNamespace());
 				return ReconcileResult.requeueAfter(5000);
 			}
 
-			// 4. Only handle MinecraftInstance game servers for scaling
+			// 5. Skip scaling if disabled
+			if (!enabled) {
+				return ReconcileResult.requeueAfter(5000);
+			}
+
+			// 6. Only handle MinecraftInstance game servers for scaling
 			Type instanceType = wrapper.getInstanceType();
 			if (!MinecraftInstance.class.equals(instanceType)) {
 				return ReconcileResult.noRequeue();
@@ -51,22 +66,22 @@ public class GameServerReconciler {
 			@SuppressWarnings("unchecked")
 			GameServerWrapper<MinecraftInstance> minecraftWrapper = (GameServerWrapper<MinecraftInstance>) wrapper;
 
-			// 5. Fetch latest instance data from Redis
+			// 7. Fetch latest instance data from Redis
 			minecraftWrapper.fetchInstances();
 
-			// 6. Get current pod count owned by this GameServer
+			// 8. Get current pod count owned by this GameServer
 			int currentPodCount = scalingExecutor.getCurrentPodCount(gameServer);
 
-			// 7. Determine scaling action
+			// 9. Determine scaling action
 			ScalingDecision decision = scalingLogic.determineScalingAction(minecraftWrapper, currentPodCount);
 
-			// 8. Execute scaling if needed
+			// 10. Execute scaling if needed
 			if (decision.getAction() != dev.kyriji.bmcmanager.enums.ScaleResult.NO_CHANGE) {
 				scalingExecutor.executeScaling(decision, gameServer, wrapper);
 				System.out.println("Scaled " + request.getName() + ": " + decision);
 			}
 
-			// 9. Always requeue after 5 seconds for periodic checks
+			// 11. Always requeue after 5 seconds for periodic checks
 			return ReconcileResult.requeueAfter(5000);
 
 		} catch (Exception e) {
@@ -87,5 +102,26 @@ public class GameServerReconciler {
 			System.err.println("Failed to fetch GameServer " + request + ": " + e.getMessage());
 		}
 		return null;
+	}
+
+	private void deleteAllPods(GameServerWrapper<?> wrapper, String namespace) {
+		wrapper.fetchInstances();
+
+		for (Instance instance : wrapper.getInstances()) {
+			try {
+				// Mark as stopping in Redis first
+				instance.setState(InstanceState.STOPPING);
+				RedisManager.get().updateInstance(instance);
+
+				// Delete the pod
+				client.pods()
+					.inNamespace(namespace)
+					.withName(instance.getPodName())
+					.delete();
+				System.out.println("Deleted pod (disabled): " + instance.getPodName());
+			} catch (Exception e) {
+				System.err.println("Failed to delete pod " + instance.getPodName() + ": " + e.getMessage());
+			}
+		}
 	}
 }

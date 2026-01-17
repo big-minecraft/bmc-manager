@@ -63,6 +63,12 @@ public class RedisManager {
 		withRedis(jedis -> jedis.hset(key, field, value));
 	}
 
+	public String hget(String key, String field) {
+		try (Jedis jedis = jedisPool.getResource()) {
+			return jedis.hget(key, field);
+		}
+	}
+
 	public void hdelAll(String key) {
 		withRedis(jedis -> {
 			Set<String> fields = jedis.hkeys(key);
