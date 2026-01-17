@@ -40,10 +40,13 @@ public class BMCManager {
 		informerManager.setupInformers();
 		informerManager.start();
 
-		// Initialize tasks
+		// Initialize tasks - GameServer discovery must run FIRST (synchronously)
+		// so wrappers exist before instances are discovered
+		gameServerDiscovery = new GameServerDiscoveryTask();
+		gameServerDiscovery.discoverGameServers();
+
 		serverDiscovery = new InstanceDiscoveryTask(instanceManager);
 		playerListener = new PlayerListenerTask();
-		gameServerDiscovery = new GameServerDiscoveryTask();
 		instanceListener = new InstanceListenerTask();
 		deploymentToggleListener = new DeploymentToggleListenerTask();
 

@@ -14,13 +14,8 @@ public class GameServerDiscoveryTask {
 
 	public GameServerDiscoveryTask() {
 		this.client = new KubernetesClientBuilder().build();
-
-		// GameServer CRD changes are already watched by InformerManager
-		// Initial discovery runs after a short delay to ensure instances are registered
-		new Thread(() -> {
-			try { Thread.sleep(5000); } catch (InterruptedException e) { throw new RuntimeException(e); }
-			discoverGameServers();
-		}).start();
+		// GameServer CRD changes are watched by InformerManager
+		// Initial discovery is called synchronously from BMCManager before instance discovery
 	}
 
 	public void discoverGameServers() {
