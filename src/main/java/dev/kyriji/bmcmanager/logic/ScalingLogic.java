@@ -28,6 +28,10 @@ public class ScalingLogic {
 			System.out.println("GameServer: " + gameServerWrapper.getName());
 			System.out.println("Strategy: " + strategy);
 			System.out.println("Current pod count from K8s: " + currentPodCount);
+			System.out.println("All instances in wrapper:");
+			for (MinecraftInstance inst : gameServerWrapper.getInstances()) {
+				System.out.println("  - " + inst.getName() + " (" + inst.getPodName() + "): state=" + inst.getState() + ", players=" + inst.getPlayers().size());
+			}
 		}
 
 		// Check what scaling action is needed
