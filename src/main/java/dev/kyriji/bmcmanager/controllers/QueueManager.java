@@ -20,19 +20,10 @@ public class QueueManager {
 	public static MinecraftInstance findInstance(Game game) {
 		QueueStrategy strategy = game.getQueueStrategy();
 
-		System.out.println("\n=== QUEUE DEBUG: " + game.getName() + " ===");
-		System.out.println("Strategy: " + strategy);
-		System.out.println("Max players per instance: " + game.getScalingSettings().maxPlayers);
-
-		MinecraftInstance result = switch(strategy) {
+		return switch(strategy) {
 			case SPREAD -> findSpreadInstance(game);
 			case FILL -> findFillInstance(game);
 		};
-
-		System.out.println("Selected instance: " + (result != null ? result.getName() + " (players: " + result.getPlayers().size() + ")" : "null"));
-		System.out.println("=== END QUEUE DEBUG ===\n");
-
-		return result;
 	}
 
 	private static MinecraftInstance findSpreadInstance(Game game) {
@@ -70,8 +61,6 @@ public class QueueManager {
 		List<MinecraftInstance> instances = game.getInstances();
 		MinecraftInstance bestInstance = null;
 		int bestPlayerCount = 0;
-
-		System.out.println("FILL: Evaluating " + instances.size() + " instances (looking for HIGHEST player count):");
 
 		for (MinecraftInstance instance : instances) {
 			int playerCount = instance.getPlayers().size();

@@ -16,7 +16,7 @@ import java.util.List;
 public class ScalingLogic {
 	// ============ DEBUG FLAG ============
 	// Set to false to disable all scaling debug output
-	private static final boolean DEBUG_SCALING = false;
+	private static final boolean DEBUG_SCALING = true;
 	// ====================================
 
 	public ScalingDecision determineScalingAction(GameServerWrapper<MinecraftInstance> gameServerWrapper, int currentPodCount) {
