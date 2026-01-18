@@ -144,6 +144,8 @@ public class ScalingLogic {
 	private ScaleResult checkToScaleThreshold(GameServerWrapper<MinecraftInstance> gameServerWrapper) {
 		int totalInstances = getTotalNonTerminatingInstanceCount(gameServerWrapper);
 		int activeInstances = getActiveInstanceCount(gameServerWrapper);
+		int runningInstances = getRunningInstanceCount(gameServerWrapper);
+		int startingInstances = activeInstances - runningInstances;
 		int playerCount = getPlayerCount(gameServerWrapper);
 		ScalingSettings settings = gameServerWrapper.getScalingSettings();
 
@@ -152,6 +154,8 @@ public class ScalingLogic {
 			System.out.println("Total players: " + playerCount);
 			System.out.println("Total instances: " + totalInstances);
 			System.out.println("Active (RUNNING+STARTING) instances: " + activeInstances);
+			System.out.println("Running instances: " + runningInstances);
+			System.out.println("Starting instances: " + startingInstances);
 		}
 
 		// Enforce minimum instances: scale up if below minimum ACTIVE instances
@@ -172,23 +176,36 @@ public class ScalingLogic {
 			return ScaleResult.NO_CHANGE;
 		}
 
-		double playersPerInstance = (double) playerCount / activeInstances;
+		// For scale-up: use all active instances (RUNNING + STARTING) - considers provisioned capacity
+		double playersPerActiveInstance = (double) playerCount / activeInstances;
+
+		// For scale-down: only use RUNNING instances - don't scale down while capacity is still starting
+		// This prevents killing servers with players while waiting for new ones to boot
+		double playersPerRunningInstance = runningInstances > 0 ? (double) playerCount / runningInstances : 0;
 
 		if (DEBUG_SCALING) {
-			System.out.println("Players per instance: " + String.format("%.2f", playersPerInstance));
+			System.out.println("Players per active instance (for scale-up): " + String.format("%.2f", playersPerActiveInstance));
+			System.out.println("Players per running instance (for scale-down): " + String.format("%.2f", playersPerRunningInstance));
 			System.out.println("Scale-up threshold: " + settings.scaleUpThreshold);
 			System.out.println("Scale-down threshold: " + settings.scaleDownThreshold);
 		}
 
-		if(playersPerInstance >= settings.scaleUpThreshold) {
+		if(playersPerActiveInstance >= settings.scaleUpThreshold) {
 			if (DEBUG_SCALING) {
-				System.out.println("Decision: SCALE UP (" + String.format("%.2f", playersPerInstance) + " >= " + settings.scaleUpThreshold + ")");
+				System.out.println("Decision: SCALE UP (" + String.format("%.2f", playersPerActiveInstance) + " >= " + settings.scaleUpThreshold + ")");
 				System.out.println("--- End Threshold Check ---");
 			}
 			return ScaleResult.UP;
-		} else if(playersPerInstance < settings.scaleDownThreshold) {
+		} else if(startingInstances > 0) {
+			// Don't scale down while instances are still starting - wait for them to become RUNNING
 			if (DEBUG_SCALING) {
-				System.out.println("Decision: SCALE DOWN (" + String.format("%.2f", playersPerInstance) + " < " + settings.scaleDownThreshold + ")");
+				System.out.println("Decision: NO CHANGE (waiting for " + startingInstances + " starting instances)");
+				System.out.println("--- End Threshold Check ---");
+			}
+			return ScaleResult.NO_CHANGE;
+		} else if(playersPerRunningInstance < settings.scaleDownThreshold) {
+			if (DEBUG_SCALING) {
+				System.out.println("Decision: SCALE DOWN (" + String.format("%.2f", playersPerRunningInstance) + " < " + settings.scaleDownThreshold + ")");
 				System.out.println("--- End Threshold Check ---");
 			}
 			return ScaleResult.DOWN;
@@ -340,6 +357,14 @@ public class ScalingLogic {
 			.filter(instance ->
 				instance.getState() == InstanceState.RUNNING ||
 				instance.getState() == InstanceState.STARTING)
+			.count();
+	}
+
+	private int getRunningInstanceCount(GameServerWrapper<? extends Instance> gameServerWrapper) {
+		// Count only RUNNING instances - used for scale-down decisions
+		// This ensures we don't scale down while new capacity is still starting
+		return (int) gameServerWrapper.getInstances().stream()
+			.filter(instance -> instance.getState() == InstanceState.RUNNING)
 			.count();
 	}
 
