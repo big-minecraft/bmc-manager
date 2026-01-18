@@ -20,8 +20,8 @@ public abstract class GameServerWrapper<T extends Instance> implements Scalable 
 	protected List<T> instances;
 	private final String name;
 
-	private final QueueStrategy queueStrategy;
-	private final ScalingSettings scalingSettings;
+	private QueueStrategy queueStrategy;
+	private ScalingSettings scalingSettings;
 
 	private long lastScaleUp = 0;
 	private long lastScaleDown = 0;
@@ -78,6 +78,15 @@ public abstract class GameServerWrapper<T extends Instance> implements Scalable 
 
 	public void setGameServer(GameServer gameServer) {
 		this.gameServer = gameServer;
+
+		// Refresh cached settings from updated CRD
+		GameServerSpec.QueuingSpec queuing = gameServer.getSpec().getQueuing();
+		this.queueStrategy = queuing != null
+				? QueueStrategy.getStrategy(queuing.getQueueStrategy())
+				: QueueStrategy.FILL;
+		this.scalingSettings = new ScalingSettings(gameServer.getSpec().getScaling());
+
+		System.out.println("Updated settings for " + name + ": " + scalingSettings);
 	}
 
 	public String getDeploymentType() {
