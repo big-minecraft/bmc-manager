@@ -6,6 +6,7 @@ import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.GameServerManager;
+import dev.kyriji.bmcmanager.controllers.QueueManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import redis.clients.jedis.JedisPubSub;
@@ -58,6 +59,9 @@ public class PlayerListenerTask {
 
 				removePlayerFromInstance(playerId, true);
 				updateGameServer(minecraftInstance);
+
+				// Release any pending queue reservations for this player
+				QueueManager.releaseAllReservations(playerId);
 			}
 		}, RedisChannel.PROXY_DISCONNECT.getRef())).start();
 
@@ -80,6 +84,8 @@ public class PlayerListenerTask {
 				server.addPlayer(playerId, name);
 				RedisManager.get().updateInstance(server);
 				updateGameServer(server);
+
+				QueueManager.releaseReservation(server.getUid(), playerId);
 			}
 		}, RedisChannel.INSTANCE_SWITCH.getRef())).start();
 	}
