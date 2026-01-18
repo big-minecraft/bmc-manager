@@ -44,6 +44,8 @@ public class InstanceDiscoveryTask {
 		podList.forEach(pod -> {
 			if (pod.getStatus().getPodIP() == null) return;
 			if (pod.getStatus().getPhase().equals("Terminating")) return;
+			// Skip pods that are being deleted (deletion timestamp is set before phase changes to Terminating)
+			if (pod.getMetadata().getDeletionTimestamp() != null) return;
 
 			if (diff(pod)) {
 				Instance instance = InstanceFactory.createFromPod(pod);

@@ -98,6 +98,26 @@ public class RedisManager {
 	public void updateInstance(Instance instance) {
 		String key = "instance:" + instance.getUid() + ":" + instance.getDeployment();
 
+		// Check if instance already exists with a terminal state - don't overwrite STOPPING/STOPPED
+		// This prevents race conditions where discovery re-registers a dying instance
+		String existingState = hget(key, "state");
+		if (existingState != null) {
+			InstanceState existing = null;
+			try {
+				existing = InstanceState.valueOf(existingState);
+			} catch (IllegalArgumentException ignored) {}
+
+			if (existing == InstanceState.STOPPING || existing == InstanceState.STOPPED) {
+				InstanceState newState = instance.getState();
+				// Only allow updates that keep or advance the terminal state
+				if (newState != InstanceState.STOPPING && newState != InstanceState.STOPPED) {
+					System.out.println("Ignoring state update for " + instance.getName() +
+						": cannot change from " + existing + " to " + newState);
+					return;
+				}
+			}
+		}
+
 		// Build all fields in a map first, then write atomically with hset(key, map)
 		// This prevents partial writes if an error occurs mid-update
 		Map<String, String> fields = new HashMap<>();
