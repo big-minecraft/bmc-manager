@@ -20,10 +20,19 @@ public class QueueManager {
 	public static MinecraftInstance findInstance(Game game) {
 		QueueStrategy strategy = game.getQueueStrategy();
 
-		return switch(strategy) {
+		System.out.println("\n=== QUEUE DEBUG: " + game.getName() + " ===");
+		System.out.println("Strategy: " + strategy);
+		System.out.println("Max players per instance: " + game.getScalingSettings().maxPlayers);
+
+		MinecraftInstance result = switch(strategy) {
 			case SPREAD -> findSpreadInstance(game);
 			case FILL -> findFillInstance(game);
 		};
+
+		System.out.println("Selected instance: " + (result != null ? result.getName() + " (players: " + result.getPlayers().size() + ")" : "null"));
+		System.out.println("=== END QUEUE DEBUG ===\n");
+
+		return result;
 	}
 
 	private static MinecraftInstance findSpreadInstance(Game game) {
@@ -31,14 +40,27 @@ public class QueueManager {
 		MinecraftInstance bestInstance = null;
 		int bestPlayerCount = Integer.MAX_VALUE;
 
-		for (MinecraftInstance instance : instances) {
-			if (instance.getPlayers().size() >= game.getScalingSettings().maxPlayers) continue;
-			if (instance.getState() != InstanceState.RUNNING) continue;
+		System.out.println("SPREAD: Evaluating " + instances.size() + " instances (looking for LOWEST player count):");
 
-			if (instance.getPlayers().size() < bestPlayerCount) {
+		for (MinecraftInstance instance : instances) {
+			int playerCount = instance.getPlayers().size();
+			int maxPlayers = game.getScalingSettings().maxPlayers;
+			InstanceState state = instance.getState();
+
+			String status;
+			if (playerCount >= maxPlayers) {
+				status = "SKIP (full: " + playerCount + "/" + maxPlayers + ")";
+			} else if (state != InstanceState.RUNNING) {
+				status = "SKIP (state: " + state + ")";
+			} else if (playerCount < bestPlayerCount) {
+				status = "NEW BEST (players: " + playerCount + " < previous best: " + bestPlayerCount + ")";
 				bestInstance = instance;
-				bestPlayerCount = instance.getPlayers().size();
+				bestPlayerCount = playerCount;
+			} else {
+				status = "NOT BETTER (players: " + playerCount + " >= best: " + bestPlayerCount + ")";
 			}
+
+			System.out.println("  - " + instance.getName() + ": " + status);
 		}
 
 		return bestInstance;
@@ -49,14 +71,27 @@ public class QueueManager {
 		MinecraftInstance bestInstance = null;
 		int bestPlayerCount = 0;
 
-		for (MinecraftInstance instance : instances) {
-			if (instance.getState() != InstanceState.RUNNING) continue;
+		System.out.println("FILL: Evaluating " + instances.size() + " instances (looking for HIGHEST player count):");
 
-			if (instance.getPlayers().size() < game.getScalingSettings().maxPlayers &&
-					instance.getPlayers().size() >= bestPlayerCount) {
+		for (MinecraftInstance instance : instances) {
+			int playerCount = instance.getPlayers().size();
+			int maxPlayers = game.getScalingSettings().maxPlayers;
+			InstanceState state = instance.getState();
+
+			String status;
+			if (state != InstanceState.RUNNING) {
+				status = "SKIP (state: " + state + ")";
+			} else if (playerCount >= maxPlayers) {
+				status = "SKIP (full: " + playerCount + "/" + maxPlayers + ")";
+			} else if (playerCount >= bestPlayerCount) {
+				status = "NEW BEST (players: " + playerCount + " >= previous best: " + bestPlayerCount + ")";
 				bestInstance = instance;
-				bestPlayerCount = instance.getPlayers().size();
+				bestPlayerCount = playerCount;
+			} else {
+				status = "NOT BETTER (players: " + playerCount + " < best: " + bestPlayerCount + ")";
 			}
+
+			System.out.println("  - " + instance.getName() + ": " + status);
 		}
 
 		return bestInstance;

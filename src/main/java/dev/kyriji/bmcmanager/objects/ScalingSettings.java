@@ -77,4 +77,15 @@ public class ScalingSettings {
 				scaleUpCooldown, scaleDownCooldown,
 				scaleUpLimit, scaleDownLimit);
 	}
+
+	@Override
+	public String toString() {
+		return "ScalingSettings{" +
+				"minInstances=" + minInstances +
+				", maxInstances=" + maxInstances +
+				", maxPlayers=" + maxPlayers +
+				", scaleUpThreshold=" + scaleUpThreshold +
+				", scaleDownThreshold=" + scaleDownThreshold +
+				'}';
+	}
 }

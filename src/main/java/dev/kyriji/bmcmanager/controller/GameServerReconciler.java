@@ -39,6 +39,9 @@ public class GameServerReconciler {
 				return ReconcileResult.requeueAfter(5000);
 			}
 
+			// 2.5. Update wrapper with latest GameServer CRD (refreshes scaling settings, queue strategy, etc.)
+			wrapper.setGameServer(gameServer);
+
 			// 3. Query Redis for current enabled state
 			String enabledStr = RedisManager.get().hget("deployment:" + request.getName(), "enabled");
 			boolean enabled = enabledStr == null || Boolean.parseBoolean(enabledStr);
