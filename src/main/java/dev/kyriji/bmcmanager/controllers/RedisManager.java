@@ -118,7 +118,7 @@ public class RedisManager {
 
 	public List<Instance> scanAndDeserializeInstances(String pattern) {
 		Gson gson = new Gson();
-		List<Instance> resultList = new ArrayList<>();
+		Map<String, Instance> resultMap = new HashMap<>(); // Use Map to deduplicate by UID
 		Type playerMapType = new TypeToken<Map<UUID, String>>(){}.getType();
 
 		try(Jedis jedis = jedisPool.getResource()) {
@@ -128,6 +128,11 @@ public class RedisManager {
 				cursor = scanResult.getCursor();
 
 				for(String key : scanResult.getResult()) {
+					// Skip if we've already processed this key (SCAN can return duplicates)
+					String keyUid = key.split(":").length > 1 ? key.split(":")[1] : key;
+					if (resultMap.containsKey(keyUid)) {
+						continue;
+					}
 					try {
 						String type = jedis.type(key);
 						if (!"hash".equals(type)) {
@@ -170,7 +175,7 @@ public class RedisManager {
 						}
 
 						instance.setState(state);
-						resultList.add(instance);
+						resultMap.put(uid, instance);
 					} catch (Exception e) {
 						System.err.println("Error deserializing instance from key '" + key + "': " + e.getMessage());
 						e.printStackTrace();
@@ -179,7 +184,7 @@ public class RedisManager {
 			} while (!cursor.equals("0"));
 		}
 
-		return resultList;
+		return new ArrayList<>(resultMap.values());
 	}
 
 	public void updateTimestamp() {
