@@ -32,11 +32,17 @@ public class GameServerReconciler {
 				return ReconcileResult.noRequeue();
 			}
 
-			// 2. Get the GameServerWrapper from the registry
+			// 2. Get the GameServerWrapper from the registry, or create one if it doesn't exist
 			GameServerWrapper<?> wrapper = BMCManager.gameServerManager.getGameServer(request.getName());
 			if (wrapper == null) {
-				// Not registered yet, requeue to try again later
-				return ReconcileResult.requeueAfter(5000);
+				// Wrapper doesn't exist - create and register it on-demand
+				// This handles GameServers created after the manager started
+				wrapper = BMCManager.gameServerManager.createWrapper(gameServer);
+				if (wrapper == null) {
+					System.err.println("Failed to create wrapper for " + request.getName() + " (unknown deployment type?)");
+					return ReconcileResult.noRequeue();
+				}
+				BMCManager.gameServerManager.registerGameServer(wrapper);
 			}
 
 			// 2.5. Update wrapper with latest GameServer CRD (refreshes scaling settings, queue strategy, etc.)
