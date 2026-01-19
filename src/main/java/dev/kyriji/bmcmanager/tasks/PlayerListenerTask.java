@@ -85,7 +85,7 @@ public class PlayerListenerTask {
 				RedisManager.get().updateInstance(server);
 				updateGameServer(server);
 
-				QueueManager.releaseReservation(server.getUid(), playerId);
+ 				QueueManager.releaseReservation(server.getUid(), playerId);
 			}
 		}, RedisChannel.INSTANCE_SWITCH.getRef())).start();
 	}
