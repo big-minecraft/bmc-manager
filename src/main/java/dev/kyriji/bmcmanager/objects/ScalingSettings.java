@@ -37,7 +37,8 @@ public class ScalingSettings {
 			return;
 		}
 
-		this.strategy = ScaleStrategy.getStrategy(scalingSpec.getStrategy());
+		ScaleStrategy parsedStrategy = ScaleStrategy.getStrategy(scalingSpec.getStrategy());
+		this.strategy = parsedStrategy != null ? parsedStrategy : ScaleStrategy.THRESHOLD;
 
 		this.maxPlayers = scalingSpec.getMaxPlayers() != null ? scalingSpec.getMaxPlayers() : 100;
 		this.minInstances = scalingSpec.getMinInstances() != null ? scalingSpec.getMinInstances() : 1;
