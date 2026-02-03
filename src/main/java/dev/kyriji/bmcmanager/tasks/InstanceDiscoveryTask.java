@@ -45,16 +45,18 @@ public class InstanceDiscoveryTask {
 		podList.addAll(proxyList);
 
 		podList.forEach(pod -> {
-			if (pod.getStatus().getPodIP() == null) return;
 			if (pod.getStatus().getPhase().equals("Terminating")) return;
 			// Skip pods that are being deleted (deletion timestamp is set before phase changes to Terminating)
 			if (pod.getMetadata().getDeletionTimestamp() != null) return;
 
-			// Check for failed pods and handle them
+			// Check for failed pods and handle them (do this BEFORE IP check, since Unknown pods may have no IP)
 			if (isPodFailed(pod)) {
 				handleFailedPod(pod);
 				return; // Don't register failed pods
 			}
+
+			// Skip pods with no IP for normal registration
+			if (pod.getStatus().getPodIP() == null) return;
 
 			if (diff(pod)) {
 				Instance instance = InstanceFactory.createFromPod(pod);
