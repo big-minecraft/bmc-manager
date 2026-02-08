@@ -32,6 +32,7 @@ public class ShutdownNegotiationManager {
 	private static final int DEFAULT_MAX_DELAY_SECONDS = 600; // 10 minutes
 	private static final int VETO_MINIMAL_DELAY_SECONDS = 60; // 1 minute if veto downgraded
 	private static final int RESPONSE_TIMEOUT_SECONDS = 10; // If no response within 10s, shutdown immediately
+	private static final int CLEANUP_GRACE_PERIOD_MS = 5000; // 5 seconds for server to perform cleanup after final shutdown
 	private static final String SHUTDOWN_PROPOSE_CHANNEL = "shutdown:propose";
 	private static final String SHUTDOWN_FINAL_CHANNEL = "shutdown:final";
 
@@ -263,8 +264,67 @@ public class ShutdownNegotiationManager {
 		instance.setState(InstanceState.STOPPING);
 		RedisManager.get().updateInstance(instance);
 
-		// Send final shutdown command (message is just the token)
+		// Send final shutdown command to server (for servers that implement the API)
+		// This allows them to perform cleanup before pod deletion
 		RedisManager.get().publish(SHUTDOWN_FINAL_CHANNEL, token);
+
+		// Schedule pod deletion after a grace period
+		// This gives servers with the API time to:
+		// - Call onFinalShutdown()
+		// - Save player data
+		// - Flush metrics
+		// - Perform other cleanup
+		scheduleDelayedPodDeletion(instance, CLEANUP_GRACE_PERIOD_MS);
+	}
+
+	/**
+	 * Schedule delayed pod deletion after a grace period.
+	 * This gives servers time to perform cleanup.
+	 *
+	 * @param instance The instance whose pod should be deleted
+	 * @param delayMs Delay in milliseconds before deletion
+	 */
+	private void scheduleDelayedPodDeletion(Instance instance, long delayMs) {
+		new Thread(() -> {
+			try {
+				Thread.sleep(delayMs);
+				deletePod(instance);
+			} catch (InterruptedException e) {
+				System.err.println("Pod deletion interrupted for " + instance.getPodName());
+			}
+		}).start();
+	}
+
+	/**
+	 * Delete a pod for an instance.
+	 *
+	 * @param instance The instance whose pod should be deleted
+	 */
+	private void deletePod(Instance instance) {
+		try {
+			// Get namespace from the GameServer
+			dev.kyriji.bmcmanager.objects.GameServerWrapper<?> wrapper =
+				BMCManager.gameServerManager.getGameServer(instance.getDeployment());
+
+			if (wrapper == null) {
+				System.err.println("Cannot delete pod for " + instance.getName() +
+				                   " - GameServer wrapper not found for deployment: " + instance.getDeployment());
+				return;
+			}
+
+			String namespace = wrapper.getGameServer().getMetadata().getNamespace();
+
+			// Delete the pod
+			BMCManager.kubernetesClient.pods()
+				.inNamespace(namespace)
+				.withName(instance.getPodName())
+				.delete();
+
+			System.out.println("Deleted pod: " + instance.getPodName() + " (final shutdown completed)");
+		} catch (Exception e) {
+			System.err.println("Failed to delete pod " + instance.getPodName() + ": " + e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 	/**
