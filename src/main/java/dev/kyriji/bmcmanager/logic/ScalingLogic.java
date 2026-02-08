@@ -34,6 +34,23 @@ public class ScalingLogic {
 			}
 		}
 
+		// CRITICAL: If there are instances in BLOCKED state (pending shutdown),
+		// wait for them to complete before making new scaling decisions
+		// This prevents race conditions where BLOCKED instances reduce activeCount
+		// and trigger additional incorrect scale-downs
+		long blockedCount = gameServerWrapper.getInstances().stream()
+			.filter(inst -> inst.getState() == InstanceState.BLOCKED)
+			.count();
+
+		if (blockedCount > 0) {
+			if (DEBUG_SCALING) {
+				System.out.println("WAITING: " + blockedCount + " instance(s) in BLOCKED state (pending shutdown)");
+				System.out.println("Deferring scaling decisions until shutdowns complete");
+				System.out.println("========== SCALING DECISION END (DEFERRED - BLOCKED INSTANCES) ==========\n");
+			}
+			return ScalingDecision.noChange(getTotalNonTerminatingInstanceCount(gameServerWrapper));
+		}
+
 		// If K8s already has enough pods, don't create more even if Redis hasn't caught up
 		// Only wait if Redis shows NO instances at all (not yet discovered)
 		// If Redis has instances but they're BLOCKED, that's a real state that needs scaling
@@ -328,30 +345,37 @@ public class ScalingLogic {
 			System.out.println("\n--- Selecting Pods for Scale-Down ---");
 		}
 
-		// Sort by player count (ascending) - instances with fewest players first
-		List<MinecraftInstance> sortedInstances = new ArrayList<>(instances);
-		sortedInstances.sort(Comparator.comparingInt(instance -> instance.getPlayers().size()));
-
 		// Filter to only include instances that are safe to remove
-		List<MinecraftInstance> candidates = sortedInstances.stream()
+		// CRITICAL: Exclude BLOCKED instances (already pending shutdown from previous scaling decision)
+		// Only select RUNNING instances
+		List<MinecraftInstance> candidates = instances.stream()
 			.filter(instance -> instance.getState() == InstanceState.RUNNING)
 			.toList();
 
 		if (DEBUG_SCALING) {
+			System.out.println("  Total instances: " + instances.size());
+			System.out.println("  RUNNING candidates: " + candidates.size());
 			candidates.forEach(instance ->
-				System.out.println("  Candidate: " + instance.getName() + ", Players: " + instance.getPlayers().size())
+				System.out.println("    Candidate: " + instance.getName() + ", Players: " + instance.getPlayers().size() + ", State: " + instance.getState())
 			);
 		}
 
+		// Sort by player count (ascending) - instances with fewest players first
+		List<MinecraftInstance> sortedCandidates = new ArrayList<>(candidates);
+		sortedCandidates.sort(Comparator.comparingInt(instance -> instance.getPlayers().size()));
+
 		// Take the first N candidates (those with fewest players)
-		int toRemove = Math.min(count, candidates.size());
+		int toRemove = Math.min(count, sortedCandidates.size());
 
 		if (DEBUG_SCALING) {
-			System.out.println("Selected " + toRemove + " instances for removal");
+			System.out.println("Selected " + toRemove + " instances for removal:");
+			sortedCandidates.subList(0, toRemove).forEach(instance ->
+				System.out.println("    -> " + instance.getName() + " (" + instance.getPodName() + "), Players: " + instance.getPlayers().size())
+			);
 			System.out.println("--- End Selecting Pods ---");
 		}
 
-		return new ArrayList<>(candidates.subList(0, toRemove));
+		return new ArrayList<>(sortedCandidates.subList(0, toRemove));
 	}
 
 	private int getPlayerCount(GameServerWrapper<MinecraftInstance> gameServerWrapper) {
