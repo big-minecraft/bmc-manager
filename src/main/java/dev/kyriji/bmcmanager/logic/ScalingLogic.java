@@ -303,6 +303,16 @@ public class ScalingLogic {
 		// This ensures we account for BLOCKED/STARTING instances (but NOT STOPPING/STOPPED)
 		int targetReplicas = getTotalNonTerminatingInstanceCount(gameServerWrapper) + instancesToAdd;
 
+		// CRITICAL SAFETY CHECK: Never allow target to go below minInstances
+		// This is a defensive check in case the logic above miscalculates
+		if (targetReplicas < settings.minInstances) {
+			if (DEBUG_SCALING) {
+				System.out.println("WARNING: Calculated target (" + targetReplicas + ") is below minInstances (" + settings.minInstances + ")");
+				System.out.println("Enforcing minInstances as target");
+			}
+			targetReplicas = settings.minInstances;
+		}
+
 		if (DEBUG_SCALING) {
 			System.out.println("Target replicas: " + targetReplicas);
 			System.out.println("--- End Calculating Target Replicas ---");

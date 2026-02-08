@@ -290,71 +290,60 @@ public class ShutdownNegotiationManager {
 		System.out.println("Issuing final shutdown to instance " + instance.getName() +
 		                   " (UID: " + instance.getUid() + ") - Token: " + token);
 
-		// Update instance state to STOPPING
-		instance.setState(InstanceState.STOPPING);
-		RedisManager.get().updateInstance(instance);
-
 		// Send final shutdown command to server (for servers that implement the API)
 		// This allows them to perform cleanup before pod deletion
 		RedisManager.get().publish(SHUTDOWN_FINAL_CHANNEL, token);
 
-		// Schedule pod deletion after a grace period
+		// Schedule state change to STOPPING after grace period
 		// This gives servers with the API time to:
 		// - Call onFinalShutdown()
 		// - Save player data
 		// - Flush metrics
 		// - Perform other cleanup
-		scheduleDelayedPodDeletion(instance, CLEANUP_GRACE_PERIOD_MS);
+		// - Optionally set their own state to STOPPING
+		//
+		// After the grace period, we force the state to STOPPING which triggers
+		// InstanceListenerTask to delete the pod (only once, not twice)
+		scheduleDelayedStateChange(instance, CLEANUP_GRACE_PERIOD_MS);
 	}
 
 	/**
-	 * Schedule delayed pod deletion after a grace period.
-	 * This gives servers time to perform cleanup.
+	 * Schedule delayed state change to STOPPING after a grace period.
+	 * This gives servers time to perform cleanup before pod deletion.
+	 * The state change to STOPPING will trigger InstanceListenerTask to delete the pod.
 	 *
-	 * @param instance The instance whose pod should be deleted
-	 * @param delayMs Delay in milliseconds before deletion
+	 * @param instance The instance to transition to STOPPING
+	 * @param delayMs Delay in milliseconds before state change
 	 */
-	private void scheduleDelayedPodDeletion(Instance instance, long delayMs) {
+	private void scheduleDelayedStateChange(Instance instance, long delayMs) {
 		new Thread(() -> {
 			try {
 				Thread.sleep(delayMs);
-				deletePod(instance);
+
+				// After grace period, check if server already set itself to STOPPING
+				// (servers with API may do this in their onFinalShutdown() handler)
+				Instance currentInstance = BMCManager.instanceManager.getFromIP(instance.getIp());
+				if (currentInstance == null) {
+					System.out.println("Instance " + instance.getName() + " no longer exists, skipping state change");
+					return;
+				}
+
+				if (currentInstance.getState() == InstanceState.STOPPING ||
+				    currentInstance.getState() == InstanceState.STOPPED) {
+					System.out.println("Instance " + instance.getName() + " already in " +
+					                   currentInstance.getState() + " state, skipping forced state change");
+					return;
+				}
+
+				// Force state to STOPPING - InstanceListenerTask will handle pod deletion
+				currentInstance.setState(InstanceState.STOPPING);
+				RedisManager.get().updateInstance(currentInstance);
+				System.out.println("Grace period expired - set " + instance.getName() + " to STOPPING");
+
 			} catch (InterruptedException e) {
-				System.err.println("Pod deletion interrupted for " + instance.getPodName());
+				System.err.println("State change interrupted for " + instance.getPodName());
 			}
 		}).start();
-	}
-
-	/**
-	 * Delete a pod for an instance.
-	 *
-	 * @param instance The instance whose pod should be deleted
-	 */
-	private void deletePod(Instance instance) {
-		try {
-			// Get namespace from the GameServer
-			dev.kyriji.bmcmanager.objects.GameServerWrapper<?> wrapper =
-				BMCManager.gameServerManager.getGameServer(instance.getDeployment());
-
-			if (wrapper == null) {
-				System.err.println("Cannot delete pod for " + instance.getName() +
-				                   " - GameServer wrapper not found for deployment: " + instance.getDeployment());
-				return;
-			}
-
-			String namespace = wrapper.getGameServer().getMetadata().getNamespace();
-
-			// Delete the pod
-			BMCManager.kubernetesClient.pods()
-				.inNamespace(namespace)
-				.withName(instance.getPodName())
-				.delete();
-
-			System.out.println("Deleted pod: " + instance.getPodName() + " (final shutdown completed)");
-		} catch (Exception e) {
-			System.err.println("Failed to delete pod " + instance.getPodName() + ": " + e.getMessage());
-			e.printStackTrace();
-		}
 	}
 
 	/**
