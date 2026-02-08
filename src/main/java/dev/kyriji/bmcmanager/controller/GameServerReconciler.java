@@ -5,6 +5,7 @@ import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
+import dev.kyriji.bmcmanager.controllers.ShutdownNegotiationManager;
 import dev.kyriji.bmcmanager.crd.GameServer;
 import dev.kyriji.bmcmanager.logic.ScalingLogic;
 import dev.kyriji.bmcmanager.objects.*;
@@ -116,21 +117,13 @@ public class GameServerReconciler {
 	private void deleteAllPods(GameServerWrapper<?> wrapper, String namespace) {
 		wrapper.fetchInstances();
 
+		// Use shutdown negotiation for deployment disable
+		// Shorter deadline (60 seconds) since this is a manual action
 		for (Instance instance : wrapper.getInstances()) {
-			try {
-				// Mark as stopping in Redis first
-				instance.setState(InstanceState.STOPPING);
-				RedisManager.get().updateInstance(instance);
-
-				// Delete the pod
-				client.pods()
-					.inNamespace(namespace)
-					.withName(instance.getPodName())
-					.delete();
-				System.out.println("Deleted pod (disabled): " + instance.getPodName());
-			} catch (Exception e) {
-				System.err.println("Failed to delete pod " + instance.getPodName() + ": " + e.getMessage());
-			}
+			String token = ShutdownNegotiationManager.get().proposeShutdown(
+				instance, "deployment_disabled", 60);
+			System.out.println("Proposed graceful shutdown for pod (deployment disabled): " +
+			                   instance.getPodName() + " (Token: " + token + ")");
 		}
 	}
 }

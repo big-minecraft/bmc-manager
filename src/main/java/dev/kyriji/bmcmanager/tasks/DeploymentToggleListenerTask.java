@@ -6,6 +6,7 @@ import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.GameServerManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
+import dev.kyriji.bmcmanager.controllers.ShutdownNegotiationManager;
 import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import redis.clients.jedis.JedisPubSub;
 
@@ -42,23 +43,14 @@ public class DeploymentToggleListenerTask {
 
 	private void deleteAllPods(GameServerWrapper<?> wrapper) {
 		wrapper.fetchInstances();
-		String namespace = wrapper.getGameServer().getMetadata().getNamespace();
 
+		// Use shutdown negotiation for deployment restart
+		// Short deadline (30 seconds) since this is an explicit restart command
 		for (Instance instance : wrapper.getInstances()) {
-			try {
-				// Mark as stopping in Redis first
-				instance.setState(InstanceState.STOPPING);
-				RedisManager.get().updateInstance(instance);
-
-				// Delete the pod
-				BMCManager.kubernetesClient.pods()
-					.inNamespace(namespace)
-					.withName(instance.getPodName())
-					.delete();
-				System.out.println("Deleted pod (restart): " + instance.getPodName());
-			} catch (Exception e) {
-				System.err.println("Failed to delete pod " + instance.getPodName() + ": " + e.getMessage());
-			}
+			String token = ShutdownNegotiationManager.get().proposeShutdown(
+				instance, "deployment_restart", 30);
+			System.out.println("Proposed graceful shutdown for pod (deployment restart): " +
+			                   instance.getPodName() + " (Token: " + token + ")");
 		}
 	}
 }

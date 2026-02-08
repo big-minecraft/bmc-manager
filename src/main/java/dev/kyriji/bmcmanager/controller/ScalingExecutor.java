@@ -3,6 +3,7 @@ package dev.kyriji.bmcmanager.controller;
 import dev.kyriji.bigminecraftapi.enums.InstanceState;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
+import dev.kyriji.bmcmanager.controllers.ShutdownNegotiationManager;
 import dev.kyriji.bmcmanager.crd.GameServer;
 import dev.kyriji.bmcmanager.enums.ScaleResult;
 import dev.kyriji.bmcmanager.objects.GameServerWrapper;
@@ -58,26 +59,24 @@ public class ScalingExecutor {
 		// CRITICAL: We manually delete specific pods to control WHICH instances are removed
 		// (e.g., those with fewest players). This gives us absolute control.
 
-		// Step 1: Mark instances as STOPPING in Redis (prevents new players from joining)
+		// NEW: Use shutdown negotiation instead of immediate deletion
+		// This allows instances to gracefully drain players before shutdown
+
+		// Step 1: Propose shutdown to selected instances
+		// ShutdownNegotiationManager will:
+		//   - Set instance state to BLOCKED (prevents new players)
+		//   - Send shutdown proposal to instance
+		//   - Handle responses (ACCEPT/DELAY/VETO)
+		//   - Issue final shutdown when ready (sets STOPPING state)
+		//   - InstanceListenerTask will then delete the pod
 		for (Instance instance : decision.getPodsToDelete()) {
-			instance.setState(InstanceState.STOPPING);
-			RedisManager.get().updateInstance(instance);
+			String token = ShutdownNegotiationManager.get().proposeShutdown(instance, "scale_down");
+			System.out.println("Proposed graceful shutdown for pod: " + instance.getPodName() +
+			                   " (Token: " + token + ")");
 		}
 
-		// Step 2: Delete the specific pods we selected
-		for (Instance instance : decision.getPodsToDelete()) {
-			try {
-				client.pods()
-					.inNamespace(namespace)
-					.withName(instance.getPodName())
-					.delete();
-				System.out.println("Deleted pod: " + instance.getPodName() + " (selected for scale-down)");
-			} catch (Exception e) {
-				System.err.println("Failed to delete pod " + instance.getPodName() + ": " + e.getMessage());
-			}
-		}
-
-		// Step 3: Update cooldown timestamp
+		// Step 2: Update cooldown timestamp
+		// Note: Pods won't be deleted immediately, but the scale-down action is considered complete
 		wrapper.setLastScaleDown(System.currentTimeMillis());
 	}
 

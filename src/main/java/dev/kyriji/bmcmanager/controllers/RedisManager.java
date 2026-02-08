@@ -132,6 +132,10 @@ public class RedisManager {
 			fields.put("players", new Gson().toJson(minecraftInstance.getPlayers()));
 		}
 
+		// TODO: Heartbeat implementation - add last_heartbeat timestamp
+		// fields.put("last_heartbeat", String.valueOf(System.currentTimeMillis()));
+		// This will enable detection of stuck/unresponsive instances during shutdown negotiation
+
 		// Atomic write - all fields written in single Redis command
 		withRedis(jedis -> jedis.hset(key, fields));
 	}
