@@ -95,12 +95,12 @@ public class ShutdownNegotiationManager {
 		RedisManager.get().hset(key, "shutdown_token", token);
 		// TODO: Store last_heartbeat timestamp here for future heartbeat monitoring
 
-		// Send shutdown proposal to instance
-		ShutdownProposal proposal = new ShutdownProposal(token, reason, maxDelaySeconds);
+		// Send shutdown proposal to instance (includes target IP for filtering)
+		ShutdownProposal proposal = new ShutdownProposal(instance.getIp(), token, reason, maxDelaySeconds);
 		RedisManager.get().publish(SHUTDOWN_PROPOSE_CHANNEL, proposal.serialize());
 
 		System.out.println("Proposed shutdown for instance " + instance.getName() +
-		                   " (UID: " + instance.getUid() + ") - Token: " + token +
+		                   " (UID: " + instance.getUid() + ", IP: " + instance.getIp() + ") - Token: " + token +
 		                   ", Reason: " + reason + ", Max delay: " + maxDelaySeconds + "s");
 
 		return token;
@@ -127,6 +127,7 @@ public class ShutdownNegotiationManager {
 		}
 
 		pendingShutdown.hasResponded = true;
+		pendingShutdown.responseType = response.getResponseType();
 		String instanceUid = pendingShutdown.instanceUid;
 
 		switch (response.getResponseType()) {
@@ -227,11 +228,40 @@ public class ShutdownNegotiationManager {
 			}
 
 			// Check #3: Players == 0 (for Minecraft instances)
+			// Only apply this optimization if:
+			// - Server ACCEPTED shutdown (didn't request delay), OR
+			// - Server requested delay but we've already passed the initial proposal time + response timeout
+			//   (meaning the delay was already granted and we're in the grace period)
 			if (instance instanceof MinecraftInstance minecraftInstance) {
 				if (minecraftInstance.getPlayers().isEmpty()) {
-					System.out.println("Instance " + instance.getName() + " has 0 players, proceeding with shutdown");
-					shouldShutdown = true;
-					shutdownReason = "zero_players";
+					boolean canOptimizeForZeroPlayers = false;
+
+					if (!pendingShutdown.hasResponded) {
+						// No response yet - don't optimize, wait for response timeout
+						canOptimizeForZeroPlayers = false;
+					} else {
+						// Server responded
+						ShutdownResponse.ResponseType responseType = pendingShutdown.responseType;
+
+						if (responseType == ShutdownResponse.ResponseType.ACCEPT) {
+							// Server accepted - safe to shutdown immediately
+							canOptimizeForZeroPlayers = true;
+						} else if (responseType == ShutdownResponse.ResponseType.DELAY) {
+							// Server requested delay - only optimize if we're past initial timeout period
+							// This allows servers to request delay even with 0 players (e.g., for initialization)
+							long minGracePeriod = pendingShutdown.proposalTime + (RESPONSE_TIMEOUT_SECONDS * 1000L);
+							if (now >= minGracePeriod) {
+								// We've given the server at least RESPONSE_TIMEOUT_SECONDS to do what it needs
+								canOptimizeForZeroPlayers = true;
+							}
+						}
+					}
+
+					if (canOptimizeForZeroPlayers) {
+						System.out.println("Instance " + instance.getName() + " has 0 players, proceeding with shutdown");
+						shouldShutdown = true;
+						shutdownReason = "zero_players";
+					}
 				}
 			}
 
@@ -427,6 +457,7 @@ public class ShutdownNegotiationManager {
 		long blockUntil;
 		boolean hasResponded = false;
 		boolean finalShutdownSent = false;
+		ShutdownResponse.ResponseType responseType = null;
 
 		PendingShutdown(String token, String instanceUid, String reason, long blockUntil) {
 			this.token = token;
