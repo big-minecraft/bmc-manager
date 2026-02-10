@@ -34,26 +34,8 @@ public class ScalingLogic {
 			}
 		}
 
-		// CRITICAL: If there are instances in BLOCKED state (pending shutdown),
-		// wait for them to complete before making new scaling decisions
-		// This prevents race conditions where BLOCKED instances reduce activeCount
-		// and trigger additional incorrect scale-downs
-		long blockedCount = gameServerWrapper.getInstances().stream()
-			.filter(inst -> inst.getState() == InstanceState.BLOCKED)
-			.count();
-
-		if (blockedCount > 0) {
-			if (DEBUG_SCALING) {
-				System.out.println("WAITING: " + blockedCount + " instance(s) in BLOCKED state (pending shutdown)");
-				System.out.println("Deferring scaling decisions until shutdowns complete");
-				System.out.println("========== SCALING DECISION END (DEFERRED - BLOCKED INSTANCES) ==========\n");
-			}
-			return ScalingDecision.noChange(getTotalNonTerminatingInstanceCount(gameServerWrapper));
-		}
-
 		// If K8s already has enough pods, don't create more even if Redis hasn't caught up
 		// Only wait if Redis shows NO instances at all (not yet discovered)
-		// If Redis has instances but they're BLOCKED, that's a real state that needs scaling
 		int totalInstancesInRedis = gameServerWrapper.getInstances().size();
 		if (currentPodCount >= settings.minInstances && totalInstancesInRedis == 0 && currentPodCount > 0) {
 			if (DEBUG_SCALING) {
@@ -403,10 +385,12 @@ public class ScalingLogic {
 	}
 
 	private int getTotalNonTerminatingInstanceCount(GameServerWrapper<? extends Instance> gameServerWrapper) {
-		// Count all instances EXCEPT those that are shutting down (STOPPING/STOPPED)
-		// This gives us the "real" total that should match the pod count
+		// Count all instances EXCEPT those that are shutting down or already accepted shutdown
+		// DRAINING = shutdown accepted by manager, going away soon (like STOPPING)
+		// BLOCKED = game in progress set by server, still real active capacity - included
 		return (int) gameServerWrapper.getInstances().stream()
 			.filter(instance ->
+				instance.getState() != InstanceState.DRAINING &&
 				instance.getState() != InstanceState.STOPPING &&
 				instance.getState() != InstanceState.STOPPED)
 			.count();

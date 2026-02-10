@@ -84,8 +84,9 @@ public class ShutdownNegotiationManager {
 		pendingShutdowns.put(token, pendingShutdown);
 		tokenToInstanceUid.put(token, instance.getUid());
 
-		// Update instance state to BLOCKED in Redis
-		instance.setState(InstanceState.BLOCKED);
+		// Update instance state to DRAINING in Redis - prevents new players being queued
+		// while keeping it distinct from BLOCKED (game in progress, set by server)
+		instance.setState(InstanceState.DRAINING);
 		RedisManager.get().updateInstance(instance);
 
 		// Store shutdown metadata in Redis
