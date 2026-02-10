@@ -30,7 +30,7 @@ public class ShutdownNegotiationManager {
 	// This prevents stuck instances from blocking scale-down indefinitely
 
 	private static final int DEFAULT_MAX_DELAY_SECONDS = 600; // 10 minutes
-	private static final int VETO_MINIMAL_DELAY_SECONDS = 60; // 1 minute if veto downgraded
+	private static final int SELF_MANAGED_SAFETY_TIMEOUT_SECONDS = 1800; // 30 minutes safety timeout for self-managed shutdowns
 	private static final int RESPONSE_TIMEOUT_SECONDS = 10; // If no response within 10s, shutdown immediately
 	private static final int CLEANUP_GRACE_PERIOD_MS = 5000; // 5 seconds for server to perform cleanup after final shutdown
 	private static final String SHUTDOWN_PROPOSE_CHANNEL = "shutdown:propose";
@@ -157,21 +157,21 @@ public class ShutdownNegotiationManager {
 				}
 				break;
 
-			case VETO:
-				System.out.println("Instance " + instanceUid + " vetoed shutdown - Reason: " + response.getReason() +
+			case SELF_MANAGED:
+				System.out.println("Instance " + instanceUid + " will self-manage shutdown - Reason: " + response.getReason() +
 				                   " (Token: " + token + ")");
-				System.out.println("Manager retains final authority - downgrading to minimal delay of " +
-				                   VETO_MINIMAL_DELAY_SECONDS + "s");
+				System.out.println("Server will set STOPPING state when ready. Safety timeout: " +
+				                   SELF_MANAGED_SAFETY_TIMEOUT_SECONDS + "s");
 
-				// Downgrade veto to minimal delay - manager retains authority
-				long minimalBlockUntil = System.currentTimeMillis() + (VETO_MINIMAL_DELAY_SECONDS * 1000L);
-				pendingShutdown.blockUntil = minimalBlockUntil;
+				// Set safety timeout - server should set STOPPING state before this
+				long safetyBlockUntil = System.currentTimeMillis() + (SELF_MANAGED_SAFETY_TIMEOUT_SECONDS * 1000L);
+				pendingShutdown.blockUntil = safetyBlockUntil;
 
 				// Update Redis
-				Instance vetoInstance = getInstanceByUid(instanceUid);
-				if (vetoInstance != null) {
-					String key = "instance:" + vetoInstance.getUid() + ":" + vetoInstance.getDeployment();
-					RedisManager.get().hset(key, "block_until", String.valueOf(minimalBlockUntil));
+				Instance selfManagedInstance = getInstanceByUid(instanceUid);
+				if (selfManagedInstance != null) {
+					String key = "instance:" + selfManagedInstance.getUid() + ":" + selfManagedInstance.getDeployment();
+					RedisManager.get().hset(key, "block_until", String.valueOf(safetyBlockUntil));
 				}
 				break;
 		}
@@ -230,8 +230,8 @@ public class ShutdownNegotiationManager {
 			// Check #3: Players == 0 (for Minecraft instances)
 			// Only apply this optimization if:
 			// - Server ACCEPTED shutdown (didn't request delay), OR
-			// - Server requested delay but we've already passed the initial proposal time + response timeout
-			//   (meaning the delay was already granted and we're in the grace period)
+			// - Server requested delay and we've reached the granted deadline
+			// NEVER apply for SELF_MANAGED - server has full control
 			if (instance instanceof MinecraftInstance minecraftInstance) {
 				if (minecraftInstance.getPlayers().isEmpty()) {
 					boolean canOptimizeForZeroPlayers = false;
@@ -247,13 +247,15 @@ public class ShutdownNegotiationManager {
 							// Server accepted - safe to shutdown immediately
 							canOptimizeForZeroPlayers = true;
 						} else if (responseType == ShutdownResponse.ResponseType.DELAY) {
-							// Server requested delay - only optimize if we're past initial timeout period
-							// This allows servers to request delay even with 0 players (e.g., for initialization)
-							long minGracePeriod = pendingShutdown.proposalTime + (RESPONSE_TIMEOUT_SECONDS * 1000L);
-							if (now >= minGracePeriod) {
-								// We've given the server at least RESPONSE_TIMEOUT_SECONDS to do what it needs
+							// Server requested delay - only optimize if we've reached the granted deadline
+							// This respects the full delay period that was granted
+							if (now >= pendingShutdown.blockUntil) {
 								canOptimizeForZeroPlayers = true;
 							}
+						} else if (responseType == ShutdownResponse.ResponseType.SELF_MANAGED) {
+							// Server is self-managing - never apply zero-player optimization
+							// Server will set STOPPING state when ready
+							canOptimizeForZeroPlayers = false;
 						}
 					}
 

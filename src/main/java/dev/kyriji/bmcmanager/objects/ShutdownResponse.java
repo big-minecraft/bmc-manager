@@ -6,9 +6,9 @@ package dev.kyriji.bmcmanager.objects;
  */
 public class ShutdownResponse {
 	public enum ResponseType {
-		ACCEPT,  // Accept shutdown immediately
-		DELAY,   // Request additional time
-		VETO     // Request to cancel shutdown
+		ACCEPT,         // Accept shutdown immediately
+		DELAY,          // Request additional time
+		SELF_MANAGED    // Server will manage shutdown and set STOPPING state when ready
 	}
 
 	private final String token;
