@@ -157,6 +157,18 @@ public class ScalingLogic {
 			System.out.println("Starting instances: " + startingInstances);
 		}
 
+		// PERSISTENT deployments use ReadWriteOnce volumes that can only be mounted by one pod
+		// at a time. If an instance is draining, block scale-up until it is fully gone so the
+		// replacement pod does not fail trying to claim the still-held volume.
+		if ("PERSISTENT".equals(gameServerWrapper.getDeploymentType()) &&
+				hasDrainingInstances(gameServerWrapper)) {
+			if (DEBUG_SCALING) {
+				System.out.println("Decision: NO CHANGE (PERSISTENT deployment has a draining instance - waiting for volume release)");
+				System.out.println("--- End Threshold Check ---");
+			}
+			return ScaleResult.NO_CHANGE;
+		}
+
 		// Enforce minimum instances: scale up if below minimum ACTIVE instances
 		if(activeInstances < settings.minInstances) {
 			if (DEBUG_SCALING) {
@@ -394,5 +406,10 @@ public class ScalingLogic {
 				instance.getState() != InstanceState.STOPPING &&
 				instance.getState() != InstanceState.STOPPED)
 			.count();
+	}
+
+	private boolean hasDrainingInstances(GameServerWrapper<? extends Instance> gameServerWrapper) {
+		return gameServerWrapper.getInstances().stream()
+			.anyMatch(instance -> instance.getState() == InstanceState.DRAINING);
 	}
 }

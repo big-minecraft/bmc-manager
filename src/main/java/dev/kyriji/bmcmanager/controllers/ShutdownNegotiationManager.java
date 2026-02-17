@@ -182,6 +182,7 @@ public class ShutdownNegotiationManager {
 	 * Check all pending shutdowns and issue final shutdown commands for instances that:
 	 * - Haven't responded within RESPONSE_TIMEOUT_SECONDS (server not running API or unresponsive), OR
 	 * - Have reached their block_until deadline, OR
+	 * - Have explicitly accepted shutdown (ACCEPT response), OR
 	 * - Have 0 players (for MinecraftInstance)
 	 *
 	 * Should be called periodically (e.g., every 5 seconds) by a background task.
@@ -226,6 +227,13 @@ public class ShutdownNegotiationManager {
 				                   " (UID: " + pendingShutdown.instanceUid + ")");
 				shouldShutdown = true;
 				shutdownReason = "deadline_reached";
+			}
+
+			// Check #4: Server explicitly accepted shutdown - proceed immediately regardless of players
+			if (pendingShutdown.hasResponded &&
+			    pendingShutdown.responseType == ShutdownResponse.ResponseType.ACCEPT) {
+				shouldShutdown = true;
+				shutdownReason = "accepted";
 			}
 
 			// Check #3: Players == 0 (for Minecraft instances)
