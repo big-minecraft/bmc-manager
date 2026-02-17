@@ -43,9 +43,7 @@ public class InstanceListenerTask {
 				// Delete pod when instance is stopping or stopped
 				if(state == InstanceState.STOPPING || state == InstanceState.STOPPED) {
 					System.out.println("Received " + state + " state for instance " + instance.getName() + " (" + instance.getPodName() + "), triggering pod deletion");
-					if(instance instanceof MinecraftInstance minecraftInstance) {
-						turnOffPod(minecraftInstance);
-					}
+					turnOffPod(instance);
 				}
 
 				RedisManager.get().updateInstance(instance);
@@ -108,7 +106,7 @@ public class InstanceListenerTask {
 		}, RedisChannel.TRANSFER_PLAYER.getRef())).start();
 	}
 
-	private void turnOffPod(MinecraftInstance instance) {
+	private void turnOffPod(Instance instance) {
 		try {
 			// With direct pod ownership (no Deployments), we just delete the pod directly
 			// No need to decrement replica counts since we own pods directly via GameServer CRD

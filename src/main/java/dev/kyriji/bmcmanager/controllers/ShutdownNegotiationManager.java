@@ -1,6 +1,7 @@
 package dev.kyriji.bmcmanager.controllers;
 
 import dev.kyriji.bigminecraftapi.enums.InstanceState;
+import dev.kyriji.bigminecraftapi.enums.RedisChannel;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bigminecraftapi.objects.MinecraftInstance;
 import dev.kyriji.bmcmanager.BMCManager;
@@ -347,10 +348,15 @@ public class ShutdownNegotiationManager {
 					return;
 				}
 
-				// Force state to STOPPING - InstanceListenerTask will handle pod deletion
+				// Force state to STOPPING - publish to INSTANCE_STATE_CHANGE so InstanceListenerTask
+				// handles pod deletion. Servers with the BMC API publish this themselves on
+				// onFinalShutdown(); for instances without it (e.g. PROCESS pods) the manager
+				// must do it here.
 				currentInstance.setState(InstanceState.STOPPING);
 				PodLabelManager.syncLbLabel(currentInstance);
 				RedisManager.get().updateInstance(currentInstance);
+				RedisManager.get().publish(RedisChannel.INSTANCE_STATE_CHANGE.getRef(),
+						currentInstance.getIp() + ":STOPPING");
 				System.out.println("Grace period expired - set " + instance.getName() + " to STOPPING");
 
 			} catch (InterruptedException e) {
