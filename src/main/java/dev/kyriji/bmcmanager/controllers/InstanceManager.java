@@ -5,7 +5,6 @@ import dev.kyriji.bigminecraftapi.enums.RedisChannel;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bmcmanager.BMCManager;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +22,7 @@ public class InstanceManager {
 	public void registerInstance(Instance instance) {
 		System.out.println("Registering instance: " + instance.getUid());
 		RedisManager.get().updateInstance(instance);
+		PodLabelManager.syncLbLabel(instance);
 		RedisManager.get().publish(RedisChannel.INSTANCE_MODIFIED.getRef(), gson.toJson(instance));
 	}
 
