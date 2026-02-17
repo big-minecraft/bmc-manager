@@ -18,6 +18,7 @@ public class GameServerSpec {
 	private ScalingSpec scaling;
 	private QueuingSpec queuing;
 	private String serviceAccountName;
+	private String maxInstanceAge;
 
 	// Getters and Setters
 	public String getDeploymentType() {
@@ -114,6 +115,14 @@ public class GameServerSpec {
 
 	public void setServiceAccountName(String serviceAccountName) {
 		this.serviceAccountName = serviceAccountName;
+	}
+
+	public String getMaxInstanceAge() {
+		return maxInstanceAge;
+	}
+
+	public void setMaxInstanceAge(String maxInstanceAge) {
+		this.maxInstanceAge = maxInstanceAge;
 	}
 
 	// Nested Classes

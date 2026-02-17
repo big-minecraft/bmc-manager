@@ -19,6 +19,7 @@ public class BMCManager {
 	public static DeploymentToggleListenerTask deploymentToggleListener;
 	public static ShutdownResponseListenerTask shutdownResponseListener;
 	public static ShutdownTimeoutCheckerTask shutdownTimeoutChecker;
+	public static InstanceAgeCheckerTask instanceAgeChecker;
 	public static InformerManager informerManager;
 	public static KubernetesClient kubernetesClient;
 
@@ -55,6 +56,7 @@ public class BMCManager {
 		// Shutdown negotiation tasks
 		shutdownResponseListener = new ShutdownResponseListenerTask();
 		shutdownTimeoutChecker = new ShutdownTimeoutCheckerTask();
+		instanceAgeChecker = new InstanceAgeCheckerTask();
 
 		System.out.println("=== BMC Manager started successfully ===");
 	}

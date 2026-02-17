@@ -13,12 +13,14 @@ import io.fabric8.kubernetes.api.model.ContainerStateTerminated;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 
+import java.time.Instant;
 import java.util.*;
 
 public class InstanceDiscoveryTask {
 	private final KubernetesClient client;
 	private final InstanceManager instanceManager;
 	private final HashMap<String, Pod> podMap = new HashMap<>();
+	private final HashMap<String, Long> podCreationTimes = new HashMap<>();
 
 	public InstanceDiscoveryTask(InstanceManager instanceManager) {
 		this.instanceManager = instanceManager;
@@ -34,6 +36,14 @@ public class InstanceDiscoveryTask {
 				}
 			}
 		}).start();
+	}
+
+	/**
+	 * Returns the Kubernetes creation timestamp (epoch millis) for a pod by UID,
+	 * or null if the pod has not been seen by the discovery loop yet.
+	 */
+	public Long getPodCreationTime(String uid) {
+		return podCreationTimes.get(uid);
 	}
 
 	private void discoverInstances() {
@@ -74,6 +84,7 @@ public class InstanceDiscoveryTask {
 
 			System.out.println("Pod no longer exists in K8s, unregistering: " + podName + " (uid=" + uid + ", deployment=" + deploymentName + ")");
 			instanceManager.unregisterInstance(deploymentName, uid);
+			podCreationTimes.remove(uid);
 		});
 
 		BMCManager.gameServerManager.getGameServers().forEach(GameServerWrapper::fetchInstances);
@@ -85,6 +96,10 @@ public class InstanceDiscoveryTask {
 		String uid = pod.getMetadata().getUid();
 		if (!podMap.containsKey(uid)) {
 			podMap.put(uid, pod);
+			String creationTimestamp = pod.getMetadata().getCreationTimestamp();
+			if (creationTimestamp != null) {
+				podCreationTimes.put(uid, Instant.parse(creationTimestamp).toEpochMilli());
+			}
 			return true;
 		}
 
