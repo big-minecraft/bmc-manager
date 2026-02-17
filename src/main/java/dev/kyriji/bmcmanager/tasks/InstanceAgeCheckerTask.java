@@ -4,6 +4,7 @@ import dev.kyriji.bigminecraftapi.enums.InstanceState;
 import dev.kyriji.bigminecraftapi.objects.Instance;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.ShutdownNegotiationManager;
+import dev.kyriji.bmcmanager.crd.GameServerSpec;
 import dev.kyriji.bmcmanager.objects.GameServerWrapper;
 import dev.kyriji.bmcmanager.utils.DurationParser;
 
@@ -46,7 +47,9 @@ public class InstanceAgeCheckerTask {
 		long now = System.currentTimeMillis();
 
 		for (GameServerWrapper<?> wrapper : BMCManager.gameServerManager.getGameServers()) {
-			String maxInstanceAge = wrapper.getGameServer().getSpec().getMaxInstanceAge();
+			GameServerSpec.ScalingSpec scaling = wrapper.getGameServer().getSpec().getScaling();
+			if (scaling == null) continue;
+			String maxInstanceAge = scaling.getMaxInstanceAge();
 			if (maxInstanceAge == null || maxInstanceAge.isBlank()) continue;
 
 			long maxAgeMillis;

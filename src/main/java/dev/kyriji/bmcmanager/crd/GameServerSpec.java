@@ -18,7 +18,6 @@ public class GameServerSpec {
 	private ScalingSpec scaling;
 	private QueuingSpec queuing;
 	private String serviceAccountName;
-	private String maxInstanceAge;
 
 	// Getters and Setters
 	public String getDeploymentType() {
@@ -117,14 +116,6 @@ public class GameServerSpec {
 		this.serviceAccountName = serviceAccountName;
 	}
 
-	public String getMaxInstanceAge() {
-		return maxInstanceAge;
-	}
-
-	public void setMaxInstanceAge(String maxInstanceAge) {
-		this.maxInstanceAge = maxInstanceAge;
-	}
-
 	// Nested Classes
 	public static class AdditionalPort {
 		private String name;
@@ -218,6 +209,7 @@ public class GameServerSpec {
 		private Integer scaleDownCooldown;
 		private Integer scaleUpLimit;
 		private Integer scaleDownLimit;
+		private String maxInstanceAge;
 
 		public String getStrategy() {
 			return strategy;
@@ -297,6 +289,14 @@ public class GameServerSpec {
 
 		public void setScaleDownLimit(Integer scaleDownLimit) {
 			this.scaleDownLimit = scaleDownLimit;
+		}
+
+		public String getMaxInstanceAge() {
+			return maxInstanceAge;
+		}
+
+		public void setMaxInstanceAge(String maxInstanceAge) {
+			this.maxInstanceAge = maxInstanceAge;
 		}
 	}
 
