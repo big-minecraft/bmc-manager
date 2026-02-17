@@ -67,9 +67,21 @@ public class GameServerReconciler {
 				return ReconcileResult.requeueAfter(5000);
 			}
 
-			// 6. Only handle MinecraftInstance game servers for scaling
+			// 6. Route by deployment type
 			Type instanceType = wrapper.getInstanceType();
 			if (!MinecraftInstance.class.equals(instanceType)) {
+				// PROCESS deployments use the base Instance type and don't participate in
+				// scaling logic, but still need their single pod created and kept alive.
+				if ("PROCESS".equalsIgnoreCase(gameServer.getSpec().getDeploymentType())) {
+					wrapper.fetchInstances();
+					int currentPodCount = scalingExecutor.getCurrentPodCount(gameServer);
+					if (currentPodCount == 0 && wrapper.getInstances().isEmpty()) {
+						ScalingDecision decision = ScalingDecision.scaleUp(0, 1);
+						scalingExecutor.executeScaling(decision, gameServer, wrapper);
+						System.out.println("Created pod for PROCESS deployment: " + request.getName());
+					}
+					return ReconcileResult.requeueAfter(5000);
+				}
 				return ReconcileResult.noRequeue();
 			}
 

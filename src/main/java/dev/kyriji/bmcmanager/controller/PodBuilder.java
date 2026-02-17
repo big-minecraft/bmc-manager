@@ -99,11 +99,13 @@ public class PodBuilder {
 					.build());
 		}
 
-		// Entrypoint ConfigMap mount
-		mounts.add(new VolumeMountBuilder()
-				.withName("entrypoint")
-				.withMountPath("/entrypoint")
-				.build());
+		// Entrypoint ConfigMap mount - not used by process deployments
+		if (!"process".equalsIgnoreCase(spec.getDeploymentType())) {
+			mounts.add(new VolumeMountBuilder()
+					.withName("entrypoint")
+					.withMountPath("/entrypoint")
+					.build());
+		}
 
 		return mounts;
 	}
@@ -124,15 +126,17 @@ public class PodBuilder {
 					.build());
 		}
 
-		// Entrypoint ConfigMap volume
-		String configMapName = gameServerName + "-entrypoint";
-		volumes.add(new VolumeBuilder()
-				.withName("entrypoint")
-				.withConfigMap(new ConfigMapVolumeSourceBuilder()
-						.withName(configMapName)
-						.withDefaultMode(0755)
-						.build())
-				.build());
+		// Entrypoint ConfigMap volume - not used by process deployments
+		if (!"process".equalsIgnoreCase(spec.getDeploymentType())) {
+			String configMapName = gameServerName + "-entrypoint";
+			volumes.add(new VolumeBuilder()
+					.withName("entrypoint")
+					.withConfigMap(new ConfigMapVolumeSourceBuilder()
+							.withName(configMapName)
+							.withDefaultMode(0755)
+							.build())
+					.build());
+		}
 
 		return volumes;
 	}
@@ -144,6 +148,7 @@ public class PodBuilder {
 			case "scalable" -> "bmc-scalable-" + gameServerName;
 			case "persistent" -> "bmc-persistent-" + gameServerName;
 			case "proxy" -> "bmc-proxy";
+			case "process" -> "bmc-process-" + gameServerName;
 			default -> null;
 		};
 	}
