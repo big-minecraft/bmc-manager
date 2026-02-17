@@ -1,6 +1,7 @@
 package dev.kyriji.bmcmanager.tasks;
 
 import dev.kyriji.bmcmanager.BMCManager;
+import dev.kyriji.bmcmanager.controllers.PodLabelManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.factories.InstanceFactory;
 import dev.kyriji.bmcmanager.controllers.InstanceManager;
@@ -192,6 +193,7 @@ public class InstanceDiscoveryTask {
 
 		if (instance != null) {
 			instance.setState(InstanceState.STOPPING);
+			PodLabelManager.syncLbLabel(instance);
 			RedisManager.get().updateInstance(instance);
 			System.out.println("Marked failed pod as STOPPING in Redis: " + podName);
 		}

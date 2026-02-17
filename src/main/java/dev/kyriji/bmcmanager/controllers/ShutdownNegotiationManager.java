@@ -87,6 +87,7 @@ public class ShutdownNegotiationManager {
 		// Update instance state to DRAINING in Redis - prevents new players being queued
 		// while keeping it distinct from BLOCKED (game in progress, set by server)
 		instance.setState(InstanceState.DRAINING);
+		PodLabelManager.syncLbLabel(instance);
 		RedisManager.get().updateInstance(instance);
 
 		// Store shutdown metadata in Redis
@@ -348,6 +349,7 @@ public class ShutdownNegotiationManager {
 
 				// Force state to STOPPING - InstanceListenerTask will handle pod deletion
 				currentInstance.setState(InstanceState.STOPPING);
+				PodLabelManager.syncLbLabel(currentInstance);
 				RedisManager.get().updateInstance(currentInstance);
 				System.out.println("Grace period expired - set " + instance.getName() + " to STOPPING");
 
@@ -396,6 +398,7 @@ public class ShutdownNegotiationManager {
 			if (instance != null) {
 				// Revert to RUNNING state
 				instance.setState(InstanceState.RUNNING);
+				PodLabelManager.syncLbLabel(instance);
 				RedisManager.get().updateInstance(instance);
 
 				// Clear shutdown metadata from Redis

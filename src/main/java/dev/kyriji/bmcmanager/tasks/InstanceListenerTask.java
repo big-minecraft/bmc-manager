@@ -3,6 +3,7 @@ package dev.kyriji.bmcmanager.tasks;
 import com.google.gson.Gson;
 import dev.kyriji.bmcmanager.BMCManager;
 import dev.kyriji.bmcmanager.controllers.GameServerManager;
+import dev.kyriji.bmcmanager.controllers.PodLabelManager;
 import dev.kyriji.bmcmanager.controllers.QueueManager;
 import dev.kyriji.bmcmanager.controllers.RedisManager;
 import dev.kyriji.bmcmanager.objects.GameServerWrapper;
@@ -37,6 +38,7 @@ public class InstanceListenerTask {
 
 				InstanceState state = InstanceState.valueOf(stateString);
 				instance.setState(state);
+				PodLabelManager.syncLbLabel(instance);
 
 				// Delete pod when instance is stopping or stopped
 				if(state == InstanceState.STOPPING || state == InstanceState.STOPPED) {
