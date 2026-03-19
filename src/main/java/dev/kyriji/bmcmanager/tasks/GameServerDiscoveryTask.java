@@ -24,9 +24,9 @@ public class GameServerDiscoveryTask {
 		List<GameServerWrapper<?>> existingGameServers = gameServerManager.getGameServers();
 		List<GameServerWrapper<?>> newGameServers = new ArrayList<>();
 
-		// List all GameServer CRDs in the default namespace
+		// List all GameServer CRDs in the configured namespace
 		List<GameServer> gameServers = client.resources(GameServer.class)
-				.inNamespace("default")
+				.inNamespace(BMCManager.getNamespace())
 				.list()
 				.getItems();
 

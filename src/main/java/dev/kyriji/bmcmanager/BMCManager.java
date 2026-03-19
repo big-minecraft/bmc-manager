@@ -71,4 +71,9 @@ public class BMCManager {
 		String portStr = env.getOrDefault("REDIS_PORT", "6379");
 		return Integer.parseInt(portStr);
 	}
+
+	public static String getNamespace() {
+		Map<String, String> env = System.getenv();
+		return env.getOrDefault("KUBERNETES_NAMESPACE", "bmc");
+	}
 }

@@ -28,7 +28,7 @@ public class PodLabelManager {
 		try {
 			if (shouldBeReady) {
 				BMCManager.kubernetesClient.pods()
-						.inNamespace("default")
+						.inNamespace(BMCManager.getNamespace())
 						.withName(instance.getPodName())
 						.edit(pod -> new PodBuilder(pod)
 								.editMetadata()
@@ -38,7 +38,7 @@ public class PodLabelManager {
 				System.out.println("Added lb-ready label to proxy pod: " + instance.getPodName());
 			} else {
 				BMCManager.kubernetesClient.pods()
-						.inNamespace("default")
+						.inNamespace(BMCManager.getNamespace())
 						.withName(instance.getPodName())
 						.edit(pod -> new PodBuilder(pod)
 								.editMetadata()

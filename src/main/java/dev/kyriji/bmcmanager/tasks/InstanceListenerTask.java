@@ -111,7 +111,7 @@ public class InstanceListenerTask {
 			// With direct pod ownership (no Deployments), we just delete the pod directly
 			// No need to decrement replica counts since we own pods directly via GameServer CRD
 			BMCManager.kubernetesClient.pods()
-				.inNamespace("default")
+				.inNamespace(BMCManager.getNamespace())
 				.withName(instance.getPodName())
 				.delete();
 			System.out.println("Deleted pod: " + instance.getPodName());

@@ -201,7 +201,7 @@ public class InstanceDiscoveryTask {
 		// Delete the pod
 		try {
 			client.pods()
-				.inNamespace(namespace != null ? namespace : "default")
+				.inNamespace(namespace != null ? namespace : BMCManager.getNamespace())
 				.withName(podName)
 				.delete();
 			System.out.println("Deleted failed pod: " + podName + " (reason=" + reason + ")");
