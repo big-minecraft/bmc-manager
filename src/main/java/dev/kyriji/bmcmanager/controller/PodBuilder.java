@@ -93,9 +93,12 @@ public class PodBuilder {
 
 		// Data volume mount (PVC)
 		if (spec.getVolume() != null && spec.getVolume().getMountPath() != null) {
+			boolean readOnly = Boolean.TRUE.equals(spec.getVolume().getReadOnly());
+
 			mounts.add(new VolumeMountBuilder()
 					.withName("data")
 					.withMountPath(spec.getVolume().getMountPath())
+					.withReadOnly(readOnly)
 					.build());
 		}
 

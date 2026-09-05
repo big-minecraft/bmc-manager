@@ -151,6 +151,7 @@ public class GameServerSpec {
 		private String mountPath;
 		private String storageClass;
 		private String size;
+		private Boolean readOnly;
 
 		public String getMountPath() {
 			return mountPath;
@@ -166,6 +167,14 @@ public class GameServerSpec {
 
 		public void setStorageClass(String storageClass) {
 			this.storageClass = storageClass;
+		}
+
+		public Boolean getReadOnly() {
+			return readOnly;
+		}
+
+		public void setReadOnly(Boolean readOnly) {
+			this.readOnly = readOnly;
 		}
 
 		public String getSize() {
