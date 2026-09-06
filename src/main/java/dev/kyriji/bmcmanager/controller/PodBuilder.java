@@ -45,6 +45,11 @@ public class PodBuilder {
 				.withVolumes(volumes)
 				.withRestartPolicy("Never");
 
+		// Artifact mode: pull the published version into the emptyDir before the
+		// server starts, instead of reading the shared volume.
+		Container fetcher = buildArtifactFetcher(spec);
+		if (fetcher != null) podSpecBuilder.withInitContainers(fetcher);
+
 		// Add service account if specified
 		if (spec.getServiceAccountName() != null && !spec.getServiceAccountName().isEmpty()) {
 			podSpecBuilder.withServiceAccountName(spec.getServiceAccountName());
@@ -59,6 +64,49 @@ public class PodBuilder {
 					.withOwnerReferences(buildOwnerReference(gameServer))
 				.endMetadata()
 				.withSpec(podSpecBuilder.build())
+				.build();
+	}
+
+	/**
+	 * Init container that pulls a published artifact into the data volume.
+	 *
+	 * Returns null when the spec carries no artifact, which leaves the pod
+	 * exactly as it was before -- mounting the deployment's shared volume.
+	 *
+	 * mc mirror rather than a tarball: the mc image ships no tar, and mirroring
+	 * keeps the version prefix browsable in the bucket.
+	 */
+	private Container buildArtifactFetcher(GameServerSpec spec) {
+		GameServerSpec.ArtifactSpec artifact = spec.getArtifact();
+		if (artifact == null || artifact.getVersion() == null || artifact.getVersion().isEmpty()) return null;
+		if (spec.getVolume() == null || spec.getVolume().getMountPath() == null) return null;
+
+		String mountPath = spec.getVolume().getMountPath();
+		String remote = String.format("store/%s/deployments/%s/%s/",
+				artifact.getBucket(), artifact.getDeployment(), artifact.getVersion());
+
+		String script = String.join("\n",
+				"set -e",
+				"mc alias set store \"$ARTIFACT_ENDPOINT\" \"$ARTIFACT_ACCESS_KEY\" \"$ARTIFACT_SECRET_KEY\"",
+				"echo \"Fetching " + artifact.getDeployment() + " " + artifact.getVersion() + "...\"",
+				"mc mirror --overwrite \"" + remote + "\" " + mountPath,
+				"echo \"Fetched " + artifact.getVersion() + "\"");
+
+		return new ContainerBuilder()
+				.withName("fetch-artifact")
+				.withImage("quay.io/minio/mc:latest")
+				.withCommand("/bin/sh", "-c", script)
+				.withEnv(
+						new EnvVarBuilder().withName("ARTIFACT_ENDPOINT").withValue(artifact.getEndpoint()).build(),
+						new EnvVarBuilder().withName("ARTIFACT_ACCESS_KEY")
+								.withNewValueFrom().withNewSecretKeyRef("artifactAccessKey", "bmc-secrets", false).endValueFrom().build(),
+						new EnvVarBuilder().withName("ARTIFACT_SECRET_KEY")
+								.withNewValueFrom().withNewSecretKeyRef("artifactSecretKey", "bmc-secrets", false).endValueFrom().build()
+				)
+				.withVolumeMounts(new VolumeMountBuilder()
+						.withName("data")
+						.withMountPath(mountPath)
+						.build())
 				.build();
 	}
 
@@ -93,7 +141,12 @@ public class PodBuilder {
 
 		// Data volume mount (PVC)
 		if (spec.getVolume() != null && spec.getVolume().getMountPath() != null) {
-			boolean readOnly = Boolean.TRUE.equals(spec.getVolume().getReadOnly());
+			// readOnly is ignored in artifact mode: the init container has to
+			// write into this volume, and nothing else shares it.
+			boolean usesArtifact = spec.getArtifact() != null
+					&& spec.getArtifact().getVersion() != null
+					&& !spec.getArtifact().getVersion().isEmpty();
+			boolean readOnly = !usesArtifact && Boolean.TRUE.equals(spec.getVolume().getReadOnly());
 
 			mounts.add(new VolumeMountBuilder()
 					.withName("data")
@@ -118,15 +171,31 @@ public class PodBuilder {
 		String gameServerName = gameServer.getMetadata().getName();
 		GameServerSpec spec = gameServer.getSpec();
 
-		// PVC volume
-		String pvcName = getPvcName(gameServerName, spec.getDeploymentType());
-		if (pvcName != null) {
+		// Data volume: an emptyDir the init container fills from object storage
+		// when an artifact is set, otherwise the deployment's shared PVC.
+		//
+		// This is the change that lets a scale-up stop contending on one
+		// filesystem. The PVC still exists either way -- file sessions and the
+		// publish Job mount it -- these pods just no longer do.
+		boolean usesArtifact = spec.getArtifact() != null
+				&& spec.getArtifact().getVersion() != null
+				&& !spec.getArtifact().getVersion().isEmpty();
+
+		if (usesArtifact) {
 			volumes.add(new VolumeBuilder()
 					.withName("data")
-					.withPersistentVolumeClaim(new PersistentVolumeClaimVolumeSourceBuilder()
-							.withClaimName(pvcName)
-							.build())
+					.withEmptyDir(new EmptyDirVolumeSourceBuilder().build())
 					.build());
+		} else {
+			String pvcName = getPvcName(gameServerName, spec.getDeploymentType());
+			if (pvcName != null) {
+				volumes.add(new VolumeBuilder()
+						.withName("data")
+						.withPersistentVolumeClaim(new PersistentVolumeClaimVolumeSourceBuilder()
+								.withClaimName(pvcName)
+								.build())
+						.build());
+			}
 		}
 
 		// Entrypoint ConfigMap volume - not used by process deployments

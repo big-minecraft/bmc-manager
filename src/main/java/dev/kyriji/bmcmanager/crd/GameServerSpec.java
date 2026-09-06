@@ -16,6 +16,7 @@ public class GameServerSpec {
 	private VolumeSpec volume;
 	private RedisConfig redis;
 	private ScalingSpec scaling;
+	private ArtifactSpec artifact;
 	private QueuingSpec queuing;
 	private String serviceAccountName;
 
@@ -108,6 +109,14 @@ public class GameServerSpec {
 		this.queuing = queuing;
 	}
 
+	public ArtifactSpec getArtifact() {
+		return artifact;
+	}
+
+	public void setArtifact(ArtifactSpec artifact) {
+		this.artifact = artifact;
+	}
+
 	public String getServiceAccountName() {
 		return serviceAccountName;
 	}
@@ -144,6 +153,55 @@ public class GameServerSpec {
 
 		public void setProtocol(String protocol) {
 			this.protocol = protocol;
+		}
+	}
+
+	/**
+	 * A published deployment artifact.
+	 *
+	 * When set, instances pull this version into an emptyDir at startup instead
+	 * of mounting the deployment's shared volume. That is what lets a scale-up
+	 * avoid contending on one filesystem: object storage does not degrade with
+	 * concurrency.
+	 *
+	 * Null means the old behaviour -- mount the volume and read from it.
+	 */
+	public static class ArtifactSpec {
+		private String endpoint;
+		private String bucket;
+		private String deployment;
+		private String version;
+
+		public String getEndpoint() {
+			return endpoint;
+		}
+
+		public void setEndpoint(String endpoint) {
+			this.endpoint = endpoint;
+		}
+
+		public String getBucket() {
+			return bucket;
+		}
+
+		public void setBucket(String bucket) {
+			this.bucket = bucket;
+		}
+
+		public String getDeployment() {
+			return deployment;
+		}
+
+		public void setDeployment(String deployment) {
+			this.deployment = deployment;
+		}
+
+		public String getVersion() {
+			return version;
+		}
+
+		public void setVersion(String version) {
+			this.version = version;
 		}
 	}
 
