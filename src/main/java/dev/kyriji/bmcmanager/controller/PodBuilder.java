@@ -94,7 +94,7 @@ public class PodBuilder {
 
 		return new ContainerBuilder()
 				.withName("fetch-artifact")
-				.withImage("quay.io/minio/mc:latest")
+				.withImage("docker.io/bitnamilegacy/minio:2025.7.23-debian-12-r3")
 				.withCommand("/bin/sh", "-c", script)
 				.withEnv(
 						new EnvVarBuilder().withName("ARTIFACT_ENDPOINT").withValue(artifact.getEndpoint()).build(),
